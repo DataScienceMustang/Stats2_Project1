@@ -16,8 +16,8 @@ Kaggle link for data reference: https://www.kaggle.com/kumarajarshi/life-expecta
 
 
 ```{r setup, include=FALSE}
-#life <-read.csv("C:/Users/david/OneDrive/Desktop/AppliedStats/6372_AppliedStats_GraceLang/Project1/LifeExpectancyData.csv")
-life <-read.csv("C:/Users/Dave/Desktop/AppliedStats/Stats2_Project1/LifeExpectancyData.csv")
+life <-read.csv("C:/Users/david/OneDrive/Desktop/AppliedStats/6372_AppliedStats_GraceLang/Project1/LifeExpectancyData.csv")
+#life <-read.csv("C:/Users/Dave/Desktop/AppliedStats/Stats2_Project1/LifeExpectancyData.csv")
 
 #Just pull out 2014 into the data
 Life14 <- subset(life, Year==2014)
@@ -30,6 +30,18 @@ Alcohol: Alcohol, recorded per capita (15+) consumption (in litres of pure alcoh
 percentage expenditure: Expenditure on health as a percentage of Gross Domestic Product per capita(%)
 Hepatitis B: Hepatitis B (HepB) immunization coverage among 1-year-olds (%)
 Measles - number of reported cases per 1000 population
+BMI: Average Body Mass Index of entire population
+Under-five-deaths: Number of under-five deaths per 1000 population
+Polio: Polio (Pol3) immunization coverage among 1-year-olds (%)
+Total expenditure: General government expenditure on health as a percentage of total government expenditure (%)
+Diphtheria: Diphtheria tetanus toxoid and pertussis (DTP3) immunization coverage among 1-year-olds (%)
+HIV/AIDS: Deaths per 1 000 live births HIV/AIDS (0-4 years)
+GDP: Gross Domestic Product per capita (in USD)
+Population: Population of the country
+thinness: Prevalence of thinness among children and adolescents for Age 10 to 19 (% )
+Thinness 5-9: Prevalence of thinness among children for Age 5 to 9(%)
+income composition: Human Development Index in terms of income composition of resources (index ranging from 0 to 1)
+Schooling: Number of years of Schooling(years)
 
 
 Things to note from summary stats:
@@ -37,6 +49,8 @@ Things to note from summary stats:
  * Mean life expectancy is 71.54 yr old
  * The max for Measles seems outrageously high 79k - which country? outlier?
  * Looks like there's a couple of positive correlations with life expectancy: income.compostion & schooling
+ * Adult mortality seems to have a gender split, but cannot determine for certain
+ * No outward evidence of any of the parameters having a non-linear relationship (adding a quadratic)
 ```{r plots}
 #Review the correlaton of data to life expectancy
 par(mfrow=c(3,6))
@@ -61,6 +75,103 @@ plot(Life14$Life.expectancy,Life14$Schooling , xlab="Life Expect",ylab="Schoolin
 ```
 
 ```{r linear}
-lm.life <- lm(Life.expectancy~.,data=Life14)
-plot(lm.life$residuals)
+library(car)
+#removing the country name
+Life14 <- Life14[,-c(1,2)]
+full.model <- lm(Life.expectancy~.,data=Life14)
+vif(full.model)
+
+par(mfrow=c(2,2))
+plot(full.model) ## There may be some outliers needing to be removed, figure out how to isolate the cooks D graph
+
+```
+
+#Based off of reviewing the VIFs, there may be some multicollinearity for the following fields:
+infant.deaths = 404
+percentage.expenditure = 11.8
+under.five.deaths = 325
+GDP: 12
+thinness 1-19: 12.8
+thinness 5-9: 13
+income.composition.of.resources = 11.4
+
+```{r variable selection}
+library(leaps)
+#Forward variable selection
+reg.fwd = regsubsets(Life.expectancy~.,data=Life14,method="forward",nvmax=20)
+
+par(mfrow=c(1,3))
+bics<-summary(reg.fwd)$bic
+plot(1:19,bics,type="l",ylab="BIC",xlab="# of predictors")
+index<-which(bics==min(bics))
+points(index,bics[index],col="red",pch=10)
+
+adjr2<-summary(reg.fwd)$adjr2
+plot(1:19,adjr2,type="l",ylab="Adjusted R-squared",xlab="# of predictors")
+index<-which(adjr2==max(adjr2))
+points(index,adjr2[index],col="red",pch=10)
+
+rss<-summary(reg.fwd)$rss
+plot(1:19,rss,type="l",ylab="train RSS",xlab="# of predictors")
+index<-which(rss==min(rss))
+points(index,rss[index],col="red",pch=10)
+
+#Backward variable selection
+reg.bwd = regsubsets(Life.expectancy~.,data=Life14,method="backward",nvmax=20)
+
+par(mfrow=c(1,3))
+bics<-summary(reg.bwd)$bic
+plot(1:19,bics,type="l",ylab="BIC",xlab="# of predictors")
+index<-which(bics==min(bics))
+points(index,bics[index],col="red",pch=10)
+
+adjr2<-summary(reg.bwd)$adjr2
+plot(1:19,adjr2,type="l",ylab="Adjusted R-squared",xlab="# of predictors")
+index<-which(adjr2==max(adjr2))
+points(index,adjr2[index],col="red",pch=10)
+
+rss<-summary(reg.bwd)$rss
+plot(1:19,rss,type="l",ylab="train RSS",xlab="# of predictors")
+index<-which(rss==min(rss))
+points(index,rss[index],col="red",pch=10)
+
+#Stepwise variable selection
+reg.ex = regsubsets(Life.expectancy~.,data=Life14,method="exhaustive",nvmax=20)
+
+par(mfrow=c(1,3))
+bics<-summary(reg.ex)$bic
+plot(1:19,bics,type="l",ylab="BIC",xlab="# of predictors")
+index<-which(bics==min(bics))
+points(index,bics[index],col="red",pch=10)
+
+adjr2<-summary(reg.ex)$adjr2
+plot(1:19,adjr2,type="l",ylab="Adjusted R-squared",xlab="# of predictors")
+index<-which(adjr2==max(adjr2))
+points(index,adjr2[index],col="red",pch=10)
+
+rss<-summary(reg.ex)$rss
+plot(1:19,rss,type="l",ylab="train RSS",xlab="# of predictors")
+index<-which(rss==min(rss))
+points(index,rss[index],col="red",pch=10)
+
+#Looking at raw BIC
+summary(reg.fwd)$bic
+summary(reg.bwd)$bic
+summary(reg.ex)$bic
+
+```
+
+Forward Selection seems to have the least parameter selection before accuracy decreases. 
+
+```{r test train}
+set.seed(123)
+Set = sample(seq(1,dim(Life14)[1]),round(.50*dim(Life14)[1]),replace = FALSE)
+#Training Set
+Train_Life = Life14[Set,]
+#Test Set
+Test_Life = Life14[-Set,]
+
+#Check to see if it's pulled 50/50% 
+#dim(Train_Life) #92   20
+#dim(Test_Life) #91   20
 ```
