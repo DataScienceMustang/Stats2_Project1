@@ -5,13 +5,6 @@ date: "5/30/2020"
 output: word_document
 ---
 
----
-title: "Project1_GraceLang"
-author: "Grace Lang"
-date: "5/24/2020"
-output: html_document
----
-
 Kaggle link for data reference: https://www.kaggle.com/kumarajarshi/life-expectancy-who
 
 
@@ -44,7 +37,7 @@ income composition: Human Development Index in terms of income composition of re
 Schooling: Number of years of Schooling(years)
 
 
-Things to note from summary stats:
+##Things to note from summary stats:
  * 83% of data comes from developing countries, life exp may be lower.
  * Mean life expectancy is 71.54 yr old
  * The max for Measles seems outrageously high 79k - which country? outlier?
@@ -83,6 +76,14 @@ vif(full.model)
 
 par(mfrow=c(2,2))
 plot(full.model) ## There may be some outliers needing to be removed, figure out how to isolate the cooks D graph
+# leveragePlots(full.model) - investigating leverage points by parameter
+# avPlots(full.model)
+
+
+#Does a log of Life look better?
+full.modellog <- lm(log(Life.expectancy)~.,data=Life14)
+par(mfrow=c(2,2))
+plot(full.modellog)
 
 ```
 
@@ -94,6 +95,8 @@ GDP: 12
 thinness 1-19: 12.8
 thinness 5-9: 13
 income.composition.of.resources = 11.4
+
+#I don't see any indication by logging life that the residuals look more scattered in a random cloud. We will keep life expectancy as is for ease of interpretation. 
 
 ```{r variable selection}
 library(leaps)
@@ -174,4 +177,28 @@ Test_Life = Life14[-Set,]
 #Check to see if it's pulled 50/50% 
 #dim(Train_Life) #92   20
 #dim(Test_Life) #91   20
+
+reg.fwd=regsubsets(Life.expectancy~.,data=Train_Life,method="forward",nvmax=20)
+
+#Really handy predict function
+predict.regsubsets =function (object , newdata ,id ,...){
+  form=as.formula (object$call [[2]])
+  mat=model.matrix(form ,newdata )
+  coefi=coef(object ,id=id)
+  xvars=names(coefi)
+  mat[,xvars]%*%coefi
+}
+testASE<-c()
+
+#I cant figure out why this is throwing an error
+for (i in 1:19){
+  predictions<-predict.regsubsets(object=reg.fwd,newdata=Test_Life,id=i) 
+  testASE[i]<-mean((Life14$Life.expectancy-predictions)^2)
+}
+par(mfrow=c(1,1))
+plot(1:92,testASE,type="l",xlab="# of predictors",ylab="test vs train ASE",ylim=c(0.3,0.8))
+index<-which(testASE==min(testASE))
+points(index,testASE[index],col="red",pch=10)
+rss<-summary(reg.fwd)$rss
+lines(1:92,rss/100,lty=3,col="blue")  
 ```
