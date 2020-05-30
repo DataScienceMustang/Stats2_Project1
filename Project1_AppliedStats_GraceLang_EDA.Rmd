@@ -12,6 +12,9 @@ date: "5/24/2020"
 output: html_document
 ---
 
+Kaggle link for data reference: https://www.kaggle.com/kumarajarshi/life-expectancy-who
+
+
 ```{r setup, include=FALSE}
 #life <-read.csv("C:/Users/david/OneDrive/Desktop/AppliedStats/6372_AppliedStats_GraceLang/Project1/LifeExpectancyData.csv")
 life <-read.csv("C:/Users/Dave/Desktop/AppliedStats/Stats2_Project1/LifeExpectancyData.csv")
@@ -19,6 +22,22 @@ life <-read.csv("C:/Users/Dave/Desktop/AppliedStats/Stats2_Project1/LifeExpectan
 #Just pull out 2014 into the data
 Life14 <- subset(life, Year==2014)
 summary(Life14)
+```
+#Column definitions:
+Adult.mortality: Adult Mortality Rates of both sexes (probability of dying between 15 and 60 years per 1000 population)
+Infant.death: Number of Infant Deaths per 1000 population
+Alcohol: Alcohol, recorded per capita (15+) consumption (in litres of pure alcohol)
+percentage expenditure: Expenditure on health as a percentage of Gross Domestic Product per capita(%)
+Hepatitis B: Hepatitis B (HepB) immunization coverage among 1-year-olds (%)
+Measles - number of reported cases per 1000 population
+
+
+Things to note from summary stats:
+ * 83% of data comes from developing countries, life exp may be lower.
+ * Mean life expectancy is 71.54 yr old
+ * The max for Measles seems outrageously high 79k - which country? outlier?
+ * Looks like there's a couple of positive correlations with life expectancy: income.compostion & schooling
+```{r plots}
 #Review the correlaton of data to life expectancy
 par(mfrow=c(3,6))
 plot(Life14$Life.expectancy,Life14$Adult.Mortality, xlab="Life Expect",ylab="Adult Mortality")
@@ -40,4 +59,8 @@ plot(Life14$Life.expectancy,Life14$thinness.5.9.years , xlab="Life Expect",ylab=
 plot(Life14$Life.expectancy,Life14$Income.composition.of.resources , xlab="Life Expect",ylab="Income.composition.of.resources")
 plot(Life14$Life.expectancy,Life14$Schooling , xlab="Life Expect",ylab="Schooling")
 ```
-Looks like there's a couple of positive correlations with life expectancy: income.compostion & schooling. 
+
+```{r linear}
+lm.life <- lm(Life.expectancy~.,data=Life14)
+plot(lm.life$residuals)
+```
