@@ -1,0 +1,43 @@
+---
+title: "Project1_AppliedStats_GraceLang"
+author: "Grace Lang"
+date: "5/30/2020"
+output: word_document
+---
+
+---
+title: "Project1_GraceLang"
+author: "Grace Lang"
+date: "5/24/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#life <-read.csv("C:/Users/david/OneDrive/Desktop/AppliedStats/6372_AppliedStats_GraceLang/Project1/LifeExpectancyData.csv")
+life <-read.csv("C:/Users/Dave/Desktop/AppliedStats/Stats2_Project1/LifeExpectancyData.csv")
+
+#Just pull out 2014 into the data
+Life14 <- subset(life, Year==2014)
+summary(Life14)
+#Review the correlaton of data to life expectancy
+par(mfrow=c(3,6))
+plot(Life14$Life.expectancy,Life14$Adult.Mortality, xlab="Life Expect",ylab="Adult Mortality")
+plot(Life14$Life.expectancy,Life14$infant.deaths, xlab="Life Expect",ylab="Infant death")
+plot(Life14$Life.expectancy,Life14$Alcohol , xlab="Life Expect",ylab="Alcohol")
+plot(Life14$Life.expectancy,Life14$percentage.expenditure , xlab="Life Expect",ylab="percentage.expenditure")
+plot(Life14$Life.expectancy,Life14$Hepatitis.B , xlab="Life Expect",ylab="Hepatitis.B")
+plot(Life14$Life.expectancy,Life14$Measles , xlab="Life Expect",ylab="Measles")
+plot(Life14$Life.expectancy,Life14$BMI , xlab="Life Expect",ylab="BMI")
+plot(Life14$Life.expectancy,Life14$under.five.deaths , xlab="Life Expect",ylab="under.five.deaths")
+plot(Life14$Life.expectancy,Life14$Polio , xlab="Life Expect",ylab="Polio")
+plot(Life14$Life.expectancy,Life14$Total.expenditure , xlab="Life Expect",ylab="Total.expenditure")
+plot(Life14$Life.expectancy,Life14$Diphtheria , xlab="Life Expect",ylab="Diphtheria")
+plot(Life14$Life.expectancy,Life14$HIV.AIDS , xlab="Life Expect",ylab="HIV.AIDS")
+plot(Life14$Life.expectancy,Life14$GDP , xlab="Life Expect",ylab="GDP")
+plot(Life14$Life.expectancy,Life14$Population , xlab="Life Expect",ylab="Population")
+plot(Life14$Life.expectancy,Life14$thinness..1.19.years , xlab="Life Expect",ylab="thinness..1.19.years")
+plot(Life14$Life.expectancy,Life14$thinness.5.9.years , xlab="Life Expect",ylab="thinness.5.9.years")
+plot(Life14$Life.expectancy,Life14$Income.composition.of.resources , xlab="Life Expect",ylab="Income.composition.of.resources")
+plot(Life14$Life.expectancy,Life14$Schooling , xlab="Life Expect",ylab="Schooling")
+```
+Looks like there's a couple of positive correlations with life expectancy: income.compostion & schooling. 
