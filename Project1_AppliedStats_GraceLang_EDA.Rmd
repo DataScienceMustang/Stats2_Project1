@@ -65,6 +65,7 @@ plot(Life14$Life.expectancy,Life14$thinness..1.19.years , xlab="Life Expect",yla
 plot(Life14$Life.expectancy,Life14$thinness.5.9.years , xlab="Life Expect",ylab="thinness.5.9.years")
 plot(Life14$Life.expectancy,Life14$Income.composition.of.resources , xlab="Life Expect",ylab="Income.composition.of.resources")
 plot(Life14$Life.expectancy,Life14$Schooling , xlab="Life Expect",ylab="Schooling")
+
 ```
 
 ```{r linear}
@@ -74,10 +75,21 @@ Life14 <- Life14[,-c(1,2)]
 full.model <- lm(Life.expectancy~.,data=Life14)
 vif(full.model)
 
+#Observe residuals and outliers
 par(mfrow=c(2,2))
-plot(full.model) ## There may be some outliers needing to be removed, figure out how to isolate the cooks D graph
-# leveragePlots(full.model) - investigating leverage points by parameter
-# avPlots(full.model)
+plot(full.model, which =1) 
+
+#Which obs are outliers according to Cooks D
+cooksd <- cooks.distance(full.model)
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance")  # plot cook's distance
+abline(h = 4*mean(cooksd, na.rm=T), col="red")  # add cutoff line
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4*mean(cooksd, na.rm=T),names(cooksd),""), col="red")
+plot(rstudent(full.model))
+# Influence Plot
+influencePlot(full.model,  main="Influence Plot")
+#influencePlot(full.model, id.method="identify", main="Influence Plot", sub="Circle size is proportial to Cook's Distance" )
+
+#Review the observations that are pulled out as outliers
 
 
 #Does a log of Life look better?
@@ -171,14 +183,15 @@ set.seed(123)
 Set = sample(seq(1,dim(Life14)[1]),round(.50*dim(Life14)[1]),replace = FALSE)
 #Training Set
 Train_Life = Life14[Set,]
+#Train_Life <- Train_Life[-1,]
 #Test Set
 Test_Life = Life14[-Set,]
 
 #Check to see if it's pulled 50/50% 
-#dim(Train_Life) #92   20
+#dim(Train_Life) #91   20
 #dim(Test_Life) #91   20
 
-reg.fwd=regsubsets(Life.expectancy~.,data=Train_Life,method="forward",nvmax=20)
+reg.fwd=regsubsets(Life.expectancy~.,data=Train_Life,method="forward",nvmax=6)
 
 #Really handy predict function
 predict.regsubsets =function (object , newdata ,id ,...){
@@ -191,14 +204,14 @@ predict.regsubsets =function (object , newdata ,id ,...){
 testASE<-c()
 
 #I cant figure out why this is throwing an error
-for (i in 1:19){
+for (i in 1:2){
   predictions<-predict.regsubsets(object=reg.fwd,newdata=Test_Life,id=i) 
-  testASE[i]<-mean((Life14$Life.expectancy-predictions)^2)
+  testASE[i]<-mean((Test_Life$Life.expectancy-predictions)^2)
 }
 par(mfrow=c(1,1))
-plot(1:92,testASE,type="l",xlab="# of predictors",ylab="test vs train ASE",ylim=c(0.3,0.8))
+plot(1:91,testASE,type="l",xlab="# of predictors",ylab="test vs train ASE",ylim=c(0.3,0.8))
 index<-which(testASE==min(testASE))
 points(index,testASE[index],col="red",pch=10)
 rss<-summary(reg.fwd)$rss
-lines(1:92,rss/100,lty=3,col="blue")  
+lines(1:91,rss/100,lty=3,col="blue")  
 ```
