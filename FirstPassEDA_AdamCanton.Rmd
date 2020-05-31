@@ -1,0 +1,194 @@
+---
+title: "First Pass Through the Data"
+author: "Adam Canton"
+date: "5/24/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(magrittr)
+library(dplyr)
+library(tidyr)
+library(naniar)
+library(ggplot2)
+library(plotly)
+library(forcats)
+library(ggExtra)
+library(glmnet)
+library(GGally)
+library(ggcorrplot)
+library(car)
+library(olsrr)
+
+```
+
+```{r}
+# Read in the csv
+fp1 <- read.csv(file = "F:/R For Real/Stats2 Project 1/Life Expectancy Data.csv")
+
+#fp1 <-read.csv("C:/Users/david/OneDrive/Desktop/AppliedStats/6372_AppliedStats_GraceLang/Project1/LifeExpectancyData.csv")
+```
+
+```{r}
+# Look at the data by variable and vartype
+str(fp1)
+```
+```{r}
+# Subsetting down to 2014
+fp2014 <- fp1 %>% filter(Year == 2014)
+```
+
+```{r}
+# See whats missing
+gg_miss_var(fp2014)
+```
+# Fixing NA's in GDP
+```{r}
+fp2014$GDP[159] = 2520.2027
+fp2014$GDP[11] = 29436.13
+fp2014$GDP[20] = 3081.23
+fp2014$GDP[28] = 1559.38
+fp2014$GDP[39] = 6208.58
+fp2014$GDP[44] = 19771.65
+fp2014$GDP[45] = 1568.63
+fp2014$GDP[46] = 352.82
+fp2014$GDP[51] = 3378.68
+fp2014$GDP[54] = 1209.68
+fp2014$GDP[61] = 607.21
+fp2014$GDP[77] = 5608.62
+fp2014$GDP[89] = 1279.64
+fp2014$GDP[90] = 1998.49
+fp2014$GDP[95] = 6466.52
+fp2014$GDP[107] = 2971.73
+fp2014$GDP[131] = 27802.96
+fp2014$GDP[132] = 2674.35
+fp2014$GDP[136] = 8743.89
+fp2014$GDP[137] = 6684.67
+fp2014$GDP[146] = 18671.59
+fp2014$GDP[162] = 5487.92
+fp2014$GDP[173] = 47614.61
+fp2014$GDP[174] = 1000.00
+fp2014$GDP[175] = 55025.13
+fp2014$GDP[179] = 16053.24
+fp2014$GDP[180] = 2030.31
+fp2014$GDP[181] = 1674.28
+```
+
+```{r}
+# Fixing Population NA's
+fp2014$Population[159] = 18715672
+fp2014$Population[11] = 370633
+fp2014$Population[20] = 10710000
+fp2014$Population[28] = 22650000
+fp2014$Population[39] = 5244359
+fp2014$Population[44] = 10510000
+fp2014$Population[45] = 25500000
+fp2014$Population[46] = 10780263
+fp2014$Population[51] = 90420000
+fp2014$Population[54] = 5580000
+fp2014$Population[61] = 2024000
+fp2014$Population[77] = 77470000
+fp2014$Population[89] = 5836000
+fp2014$Population[90] = 6640000
+fp2014$Population[95] = 6362000
+fp2014$Population[107] = 107446
+fp2014$Population[131] = 50750000
+fp2014$Population[132] = 3556000
+fp2014$Population[136] = 178296
+fp2014$Population[137] = 108861
+fp2014$Population[146] = 5420000
+fp2014$Population[162] = 2070000
+fp2014$Population[173] = 64350000
+fp2014$Population[174] = 49960000
+fp2014$Population[175] = 318400000
+fp2014$Population[179] = 30050000
+fp2014$Population[180] = 91710000
+fp2014$Population[181] = 25820000
+fp2014$Population[130] = 2459000
+fp2014$Population[145] = 5470000
+fp2014$Population[172] = 9214000
+fp2014$Population[88] = 3691000
+fp2014$Population[12] = 1336000
+fp2014$Population[140] = 30920000
+fp2014$Population[14] = 284825
+fp2014$Population[5] = 92562
+fp2014$Population[66] = 108902
+fp2014$Population[116] = 4510000
+fp2014$Population[24] = 409769
+fp2014$Population[121] = 4027000
+fp2014$Population[149] = 13420000
+fp2014$Population[42] = 11310000
+```
+
+```{r}
+fp2014 %>% write.csv("Filtered2014.csv")
+```
+
+```{r}
+# Verifying Whats left
+gg_miss_var(fp2014)
+```
+
+```{r}
+#adding an average life expectancy column and displaying it 
+fp2014 %>% group_by(Country, Status) %>% summarise(LifeEx = Life.expectancy) %>%
+  ggplot(aes(x = reorder(Country, -LifeEx), y = LifeEx, fill = Status)) +
+  geom_col(width = 0.75, na.rm = TRUE) +
+  theme(axis.text.x = element_blank()) + 
+  xlab("Country") + 
+  ggtitle("Life Expectancy 2014")
+
+```
+
+```{r}
+#hard to display all 193 countries - so heres the list
+Summary1 = fp2014 %>% group_by(Country, Status) %>% summarise(LifeEx = Life.expectancy) %>% arrange(-LifeEx) 
+knitr::kable(Summary1[1:25,1:3], caption = "a subset of Life Expectancy 2014")
+```
+
+
+```{r}
+# Correlation Matrix / need to check this / not sure everything I need is represented / plot provided by ##http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html#Correlogram
+### Excluded factors here have been selected to due high (>0.9) correlations
+library(tidyselect)
+exclude_factors <- c("Country", "Status", "Year", "infant.deaths", "percentage.expenditure", "Hepatitis.B", "Schooling")
+corr <- fp2014 %>% select( -all_of(exclude_factors)) %>% drop_na()
+corr <- round(cor(corr), 2)
+ggcorrplot(corr, hc.order = TRUE, type = "lower",
+           lab = TRUE, lab_size = 3, method = "circle",
+           colors = c("tomato2", "white", "springgreen3"),
+           title = "Correlations of all relevant variables",
+           ggtheme = theme_bw())
+```
+
+```{r}
+# Throwing all effects and seeing what sticks
+model1 = lm(fp2014$Life.expectancy ~ fp2014$GDP + fp2014$Alcohol + fp2014$Income.composition.of.resources + fp2014$Total.expenditure + fp2014$Polio +
+                          fp2014$Diphtheria + fp2014$Adult.Mortality + fp2014$HIV.AIDS + fp2014$thinness..1.19.years +
+                          fp2014$Measles + fp2014$under.five.deaths + fp2014$Population)
+```
+
+```{r}
+summary(model1)
+vif(model1)
+```
+
+
+```{r}
+# only run this if you have a long time.... roughly 5000 models lol
+#model2 <- ols_step_all_possible(model1)
+#model2
+#plot(model2)
+```
+
+```{r}
+# honing in on main effects
+model3 <- lm(fp2014$Life.expectancy ~ fp2014$Income.composition.of.resources + fp2014$Total.expenditure +
+                          fp2014$Adult.Mortality + fp2014$HIV.AIDS)
+summary(model3)
+vif(model3)
+```
+
+
+

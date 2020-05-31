@@ -1,0 +1,65 @@
+---
+title: "Train and Test"
+author: "Adam Canton"
+date: "5/31/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(magrittr)
+library(dplyr)
+library(tidyr)
+library(naniar)
+library(ggplot2)
+library(plotly)
+library(forcats)
+library(ggExtra)
+library(glmnet)
+library(GGally)
+library(ggcorrplot)
+library(car)
+library(olsrr)
+library(ISLR)
+library(leaps)
+```
+
+```{r}
+fp1 <- read.csv(file = "F:/R For Real/Stats2 Project 1/Filtered2014.csv")
+```
+
+```{r}
+exclude_factors <- c("X")
+fp1 = fp1 %>% select(-all_of(exclude_factors))
+```
+
+```{r}
+fp1 = fp1 %>% drop_na()
+```
+
+```{r}
+apply(fp1, 2, function(x) sum(is.na(x)))
+```
+
+```{r}
+#The function call designed by Dr. Turner
+predict.regsubsets =function (object , newdata ,id ,...){
+  form=as.formula (object$call [[2]])
+  mat=model.matrix(form ,newdata )
+  coefi=coef(object ,id=id)
+  xvars=names(coefi)
+  mat[,xvars]%*%coefi
+}
+```
+
+```{r}
+set.seed(1234)
+index<-sample(1:dim(fp1)[1],82,replace=F)
+train<-fp1[index,]
+test<-fp1[-index,]
+```
+
+```{r}
+reg.fwd=regsubsets(fp1$Life.expectancy~.,data=train,method="forward",nvmax=20)
+```
+
