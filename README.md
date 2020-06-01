@@ -1,9 +1,14 @@
-Notes from EDA
+_Meetings:_
+* 6/3 8:00p CT / 9:00p ET
+* 6/5 4:00p CT / 5:00p ET
+* TBD
+
+## Notes from EDA
 * Outliers: none
 * missing data: worldbank.org = missing values to fill in populations
 * classification of developing/developed (ie France was developing... many be up for debate) 
 
-Next steps: 
+## Next steps: 
 * multicolinearity = VIF inflation, variables coorelated with each other
     ** colinearity removing those just correlated to the response variable (Life exp) 
     ** efficient: remove multicol second, then do variable selction (if theres a ton of variables)
@@ -16,10 +21,7 @@ Next steps:
 * % missing mix
   -Read up on artificial data
 
-Variable selection: 
+## Variable selection: 
 - try running with school and then running without/ see if variable selection pulls it out naturally
 
-Meetings: 
-*6/3 8:00p CT / 9:00p ET
-*6/5 4:00p CT / 5:00p ET
-* TBD
+
