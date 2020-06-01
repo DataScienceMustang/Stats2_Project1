@@ -68,6 +68,85 @@ plot(Life14$Life.expectancy,Life14$Schooling , xlab="Life Expect",ylab="Schoolin
 
 ```
 
+# Fixing NA's in GDP
+```{r}
+Life14$GDP[159] = 2520.2027
+Life14$GDP[11] = 29436.13
+Life14$GDP[20] = 3081.23
+Life14$GDP[28] = 1559.38
+Life14$GDP[39] = 6208.58
+Life14$GDP[44] = 19771.65
+Life14$GDP[45] = 1568.63
+Life14$GDP[46] = 352.82
+Life14$GDP[51] = 3378.68
+Life14$GDP[54] = 1209.68
+Life14$GDP[61] = 607.21
+Life14$GDP[77] = 5608.62
+Life14$GDP[89] = 1279.64
+Life14$GDP[90] = 1998.49
+Life14$GDP[95] = 6466.52
+Life14$GDP[107] = 2971.73
+Life14$GDP[131] = 27802.96
+Life14$GDP[132] = 2674.35
+Life14$GDP[136] = 8743.89
+Life14$GDP[137] = 6684.67
+Life14$GDP[146] = 18671.59
+Life14$GDP[162] = 5487.92
+Life14$GDP[173] = 47614.61
+Life14$GDP[174] = 1000.00
+Life14$GDP[175] = 55025.13
+Life14$GDP[179] = 16053.24
+Life14$GDP[180] = 2030.31
+Life14$GDP[181] = 1674.28
+```
+
+```{r}
+# Fixing Population NA's
+Life14$Population[159] = 18715672
+Life14$Population[11] = 370633
+Life14$Population[20] = 10710000
+Life14$Population[28] = 22650000
+Life14$Population[39] = 5244359
+Life14$Population[44] = 10510000
+Life14$Population[45] = 25500000
+Life14$Population[46] = 10780263
+Life14$Population[51] = 90420000
+Life14$Population[54] = 5580000
+Life14$Population[61] = 2024000
+Life14$Population[77] = 77470000
+Life14$Population[89] = 5836000
+Life14$Population[90] = 6640000
+Life14$Population[95] = 6362000
+Life14$Population[107] = 107446
+Life14$Population[131] = 50750000
+Life14$Population[132] = 3556000
+Life14$Population[136] = 178296
+Life14$Population[137] = 108861
+Life14$Population[146] = 5420000
+Life14$Population[162] = 2070000
+Life14$Population[173] = 64350000
+Life14$Population[174] = 49960000
+Life14$Population[175] = 318400000
+Life14$Population[179] = 30050000
+Life14$Population[180] = 91710000
+Life14$Population[181] = 25820000
+Life14$Population[130] = 2459000
+Life14$Population[145] = 5470000
+Life14$Population[172] = 9214000
+Life14$Population[88] = 3691000
+Life14$Population[12] = 1336000
+Life14$Population[140] = 30920000
+Life14$Population[14] = 284825
+Life14$Population[5] = 92562
+Life14$Population[66] = 108902
+Life14$Population[116] = 4510000
+Life14$Population[24] = 409769
+Life14$Population[121] = 4027000
+Life14$Population[149] = 13420000
+Life14$Population[42] = 11310000
+```
+
+
 ```{r linear}
 library(car)
 #removing the country name
@@ -203,8 +282,10 @@ predict.regsubsets =function (object , newdata ,id ,...){
 }
 testASE<-c()
 
+
 #I cant figure out why this is throwing an error
-for (i in 1:2){
+##throwing an error from the NAs
+for (i in 1:6){
   predictions<-predict.regsubsets(object=reg.fwd,newdata=Test_Life,id=i) 
   testASE[i]<-mean((Test_Life$Life.expectancy-predictions)^2)
 }
