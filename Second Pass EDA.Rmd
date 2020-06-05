@@ -1,0 +1,325 @@
+---
+title: "Second Pass EDA 1 - Checking Collinearity and then Selecting"
+author: "Adam Canton"
+date: "6/4/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(magrittr)
+library(dplyr)
+library(tidyr)
+library(naniar)
+library(ggplot2)
+library(plotly)
+library(forcats)
+library(ggExtra)
+library(glmnet)
+library(GGally)
+library(ggcorrplot)
+library(car)
+library(olsrr)
+library(leaps)
+```
+
+```{r}
+#The function call designed by Dr. Turner
+predict.regsubsets =function (object , newdata ,id ,...){
+  form=as.formula (object$call [[2]])
+  mat=model.matrix(form ,newdata )
+  coefi=coef(object ,id=id)
+  xvars=names(coefi)
+  mat[,xvars]%*%coefi
+}
+```
+
+```{r}
+# Read in the csv
+LifeExpectancyOG <- read.csv(file = "F:/R For Real/Stats2 Project 1/Life Expectancy Data.csv")
+```
+
+```{r}
+# Subsetting down to 2014 - switching to Grace's variable names to make going between easier
+Life14 <- LifeExpectancyOG %>% filter(Year == 2014)
+```
+
+```{r}
+gg_miss_var(Life14)
+```
+
+```{r}
+# Fixing 27 NAs in GDP
+
+Life14$GDP[159] = 2520.2027
+Life14$GDP[11] = 29436.13
+Life14$GDP[20] = 3081.23
+Life14$GDP[28] = 1559.38
+Life14$GDP[39] = 6208.58
+Life14$GDP[44] = 19771.65
+Life14$GDP[45] = 1568.63
+Life14$GDP[46] = 352.82
+Life14$GDP[51] = 3378.68
+Life14$GDP[54] = 1209.68
+Life14$GDP[61] = 607.21
+Life14$GDP[77] = 5608.62
+Life14$GDP[89] = 1279.64
+Life14$GDP[90] = 1998.49
+Life14$GDP[95] = 6466.52
+Life14$GDP[107] = 2971.73
+Life14$GDP[131] = 27802.96
+Life14$GDP[132] = 2674.35
+Life14$GDP[136] = 8743.89
+Life14$GDP[137] = 6684.67
+Life14$GDP[146] = 18671.59
+Life14$GDP[162] = 5487.92
+Life14$GDP[173] = 47614.61
+Life14$GDP[174] = 1000.00
+Life14$GDP[175] = 55025.13
+Life14$GDP[179] = 16053.24
+Life14$GDP[180] = 2030.31
+Life14$GDP[181] = 1674.28
+```
+
+```{r}
+# Fixing 41 Population NA's
+Life14$Population[159] = 18715672
+Life14$Population[11] = 370633
+Life14$Population[20] = 10710000
+Life14$Population[28] = 22650000
+Life14$Population[39] = 5244359
+Life14$Population[44] = 10510000
+Life14$Population[45] = 25500000
+Life14$Population[46] = 10780263
+Life14$Population[51] = 90420000
+Life14$Population[54] = 5580000
+Life14$Population[61] = 2024000
+Life14$Population[77] = 77470000
+Life14$Population[89] = 5836000
+Life14$Population[90] = 6640000
+Life14$Population[95] = 6362000
+Life14$Population[107] = 107446
+Life14$Population[131] = 50750000
+Life14$Population[132] = 3556000
+Life14$Population[136] = 178296
+Life14$Population[137] = 108861
+Life14$Population[146] = 5420000
+Life14$Population[162] = 2070000
+Life14$Population[173] = 64350000
+Life14$Population[174] = 49960000
+Life14$Population[175] = 318400000
+Life14$Population[179] = 30050000
+Life14$Population[180] = 91710000
+Life14$Population[181] = 25820000
+Life14$Population[130] = 2459000
+Life14$Population[145] = 5470000
+Life14$Population[172] = 9214000
+Life14$Population[88] = 3691000
+Life14$Population[12] = 1336000
+Life14$Population[140] = 30920000
+Life14$Population[14] = 284825
+Life14$Population[5] = 92562
+Life14$Population[66] = 108902
+Life14$Population[116] = 4510000
+Life14$Population[24] = 409769
+Life14$Population[121] = 4027000
+Life14$Population[149] = 13420000
+Life14$Population[42] = 11310000
+```
+
+```{r}
+# Fixing 27 - 0 Percent Expenditures - Likely going to turn this variable into a categorical with 3-5 levels depending on spread
+Life14$percentage.expenditure[11] = 748.36
+Life14$percentage.expenditure[20] = 115.35
+Life14$percentage.expenditure[28] = 16.85
+Life14$percentage.expenditure[39] = 34.78
+Life14$percentage.expenditure[44] = 1249.23
+Life14$percentage.expenditure[46] = 2.68
+Life14$percentage.expenditure[51] = 48.66
+Life14$percentage.expenditure[54] = 2.82
+Life14$percentage.expenditure[61] = 4.93
+Life14$percentage.expenditure[77] = 192.78
+Life14$percentage.expenditure[89] = 35.5
+Life14$percentage.expenditure[90] = 13.79
+Life14$percentage.expenditure[95] = 197.84
+Life14$percentage.expenditure[107] = 102.43
+Life14$percentage.expenditure[131] = 1093.43
+Life14$percentage.expenditure[132] = 113.87
+Life14$percentage.expenditure[136] = 189.84
+Life14$percentage.expenditure[137] = 178.51
+Life14$percentage.expenditure[146] = 1024.94
+Life14$percentage.expenditure[159] = 31.65
+Life14$percentage.expenditure[162] = 219.74
+Life14$percentage.expenditure[173] = 3682.48
+Life14$percentage.expenditure[174] = 11.47
+Life14$percentage.expenditure[175] = 4541.8
+Life14$percentage.expenditure[179] = 235.35
+Life14$percentage.expenditure[180] = 48.82
+Life14$percentage.expenditure[181] = 12.9
+```
+
+```{r}
+# Fixing the 10 missing school variables - well except somalia (setting to 0) - might considering leaving somlia out it has almost no data
+Life14$Schooling[28] = 5.2
+Life14$Schooling[44] = 12.7
+Life14$Schooling[45] = 10.8
+Life14$Schooling[46] = 6.8
+Life14$Schooling[131] = 12.2
+Life14$Schooling[132] = 11.6
+Life14$Schooling[149] = 0
+Life14$Schooling[173] = 17.4
+Life14$Schooling[174] = 8
+Life14$Schooling[175] = 16.3
+```
+
+```{r}
+# Still missing some income comp and Hep -  otherwise we are only losing 1-2 NA if we drop - check correlation - 
+## pretty sure we can drop income comp for schooling and HepB for some other vaccine stat (Polio, Diptheria, Measles)
+gg_miss_var(Life14)
+```
+
+```{r}
+# Checking correlations between variables that are missing data and variables I think may make good substitutes and are not missing data.
+# It seems that Schooling is a good replacement for income.comp though it seems as though income.comp has a slightly better relationship with life expectancy
+# I think Im going to go with Schooling as the more complete variable
+# Diphtheria and HepB also seem like good substitutes and diptheria is the more highly correlated with life expectancy
+# going to throw out income.comp, and HepB, along with year, country, status to check correlations in next chunk
+
+corr <- Life14 %>% 
+  select("Income.composition.of.resources", "Hepatitis.B", "Diphtheria", "Schooling", "Measles", "Life.expectancy", "GDP", "Polio") %>%
+  drop_na()
+
+corr <- round(cor(corr), 2)
+
+ggcorrplot(corr, hc.order = TRUE, type = "lower",
+           lab = TRUE, lab_size = 3, method = "circle",
+           colors = c("tomato2", "white", "springgreen3"),
+           title = "Correlations of all relevant variables",
+           ggtheme = theme_bw())
+```
+
+```{r}
+# http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html#Correlogram
+# Excluded factors here have been selected to due high (>0.9) correlations or are not numeric in nature (Status...)
+# The results here show that we can likely get rid of: a thinness category, either infant deaths or deaths under 5, and gdp or percent.expenditure
+
+exclude_factors <- c("Country", "Status", "Year", "Hepatitis.B", "Income.composition.of.resources")
+
+corr <- Life14 %>% select( -all_of(exclude_factors)) %>% drop_na()
+
+corr <- round(cor(corr), 2)
+
+ggcorrplot(corr, hc.order = TRUE, type = "lower",
+           lab = TRUE, lab_size = 3, method = "circle",
+           colors = c("tomato2", "white", "springgreen3"),
+           title = "Correlations of all relevant variables",
+           ggtheme = theme_bw())
+```
+
+```{r}
+# The variables I threw out are the ones that were missing data or least correlated with life expectancy - 
+# Though admittedly sometimes the difference was small
+# Throw out - infant deaths, thinness 1-19, and percent expenditure
+# no more significant correlations between explanatory variables - time to look at selection
+
+exclude_factors <- c("Country", "Status", "Year", "Hepatitis.B", 
+                     "Income.composition.of.resources", "infant.deaths", "thinness..1.19.years", "percentage.expenditure")
+
+corr <- Life14 %>% select( -all_of(exclude_factors)) %>% drop_na()
+
+corr <- round(cor(corr), 2)
+
+ggcorrplot(corr, hc.order = TRUE, type = "lower",
+           lab = TRUE, lab_size = 3, method = "circle",
+           colors = c("tomato2", "white", "springgreen3"),
+           title = "Correlations of all relevant variables",
+           ggtheme = theme_bw())
+```
+
+```{r}
+# Naming new set Life14Select - to signify that I have removed some variables already
+# only lost 4 rows from dropping NA, acceptable loss?
+Life14Select = Life14 %>% select( -all_of(exclude_factors)) %>% drop_na()
+```
+
+```{r}
+# Checking that none of whats left has anything missing
+apply(Life14Select, 2, function(x) sum(is.na(x)))
+```
+
+```{r}
+# Set training and Testing Sets
+set.seed(1234)
+index<-sample(1:dim(Life14Select)[1],90,replace=F)
+train<-Life14Select[index,]
+test<-Life14Select[-index,]
+```
+
+```{r}
+# Forward Selection - BIC Suggests 5 predictors - Mallow CP suggests 5 
+reg.fwd=regsubsets(Life.expectancy~.,data=train,method="forward",nvmax=20)
+bics<-summary(reg.fwd)$bic
+plot(1:13,bics,type="l",ylab="BIC",xlab="# of predictors")
+index<-which(bics==min(bics))
+points(index,bics[index],col="red",pch=10)
+```
+
+```{r}
+# Adjr2 suggests up to 9
+adjr2<-summary(reg.fwd)$adjr2
+plot(1:13,adjr2,type="l",ylab="Adjusted R-squared",xlab="# of predictors")
+index<-which(adjr2==max(adjr2))
+points(index,adjr2[index],col="red",pch=10)
+```
+
+```{r}
+MallowCP <- summary(reg.fwd)$cp
+plot(1:13,MallowCP,type="l",ylab="Mallow's CP",xlab="# of predictors")
+index<-which(MallowCP==min(MallowCP))
+points(index,MallowCP[index],col="red",pch=10)
+```
+
+```{r}
+# Looking for a good model using Olsrr going to start with stepwise - using p-values as target values
+model1 <- lm(Life.expectancy ~ ., data = Life14Select)
+ols_step_both_p(model1)
+```
+```{r}
+model1 <- lm(Life.expectancy ~ Schooling + Adult.Mortality + HIV.AIDS + GDP + thinness.5.9.years + Diphtheria + Alcohol, data = Life14Select)
+summary(model1)
+vif(model1)
+```
+
+```{r}
+# nice looking random cloud
+ols_plot_resid_fit(model1)
+```
+
+```{r}
+# Checking fit of model 1 - we actually look really good here. We have 2 points that may be problematic #28 Ivory Coast and #143 Seychelle 
+# unsure of why this is nothing really stand out about them.
+ols_plot_resid_lev(model1)
+```
+```{r}
+# Here we see the low end looks a bit un-normal but overall is largely normal
+ols_plot_resid_qq(model1)
+```
+
+```{r}
+# as we saw in the QQ plot above there is some left skew here but largely looks normal
+ols_plot_resid_hist(model1)
+```
+
+```{r}
+# Playing around with some things in model 1 - calling it model 2 for now - unlikely this will stay
+# Here we see we can drop all but the most signifcant predictors and still maintain above 80% r2 - increase in RMSE is negligible
+# not real sure what to think here - will attack from other direction and decide
+model2 <- lm(Life.expectancy ~ Schooling + Adult.Mortality + HIV.AIDS, data = Life14Select)
+summary(model2)
+vif(model2)
+ols_plot_resid_fit(model2)
+ols_plot_resid_lev(model2)
+ols_plot_resid_qq(model2)
+ols_plot_resid_hist(model2)
+```
+
