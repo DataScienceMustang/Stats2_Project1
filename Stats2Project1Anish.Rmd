@@ -1,0 +1,196 @@
+---
+title: "Untitled"
+author: "AP"
+date: "5/30/2020"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Report
+
+
+### Objective 1: 
+Display the ability to build regression models using the skills and discussions from Unit 1 and 2 with the purpose of identifying key relationships, interpreting those relationships, and making good predictions. SUBSET YEAR 2014 DATA   
+
+Import data:
+
+```{r message = FALSE}
+library(tidyverse)
+df <- read.csv("Life Expectancy Data.csv")
+```
+
+Subset data for 2014:
+
+```{r}
+df.2014 <- filter(df, Year == 2014)
+```
+
+Exploratory data analysis (EDA)
+
+Summary statistics:
+
+```{r}
+summary(df.2014)
+```
+
+EDA for the response variable, Life expectancy:
+
+- Histogram:
+
+```{r}
+df.2014 %>% ggplot(aes(x = Life.expectancy)) + geom_histogram()
+```
+
+- Boxplot:
+
+```{r}
+df.2014 %>% ggplot(aes(y = Life.expectancy)) + geom_boxplot()
+```
+
+- Boxplot of life expectancy by country status:
+
+```{r}
+df.2014 %>% ggplot(aes(y = Life.expectancy)) + geom_boxplot() + facet_wrap(~Status)
+```
+
+
+Pairwise plots for selected variables:
+
+```{r message = FALSE, warning = FALSE}
+df2 <- select(df.2014, c(Life.expectancy, Adult.Mortality, Total.expenditure, HIV.AIDS, Income.composition.of.resources, Schooling))
+library(GGally)
+ggpairs(df2)
+```
+
+
+- Correlation between life expectancy and all the numeric independent variables:
+
+```{r}
+cor.xy <- cor(df.2014 %>% select(-c(Country, Year, Status)), use = "complete.obs")
+LE.cor <- data.frame(var = rownames(cor.xy)[-1], correlation = cor.xy[-1, 1])
+LE.cor %>% ggplot(aes(x = var, y = correlation)) + geom_col() + coord_flip()
+```
+
+• Build a model with the main goal to identify key relationships and is highly interpretable.  Perform your regression analysis and report the predictive ability of your model using a test set or some other means through CV.  Be sure to provide metrics if you compare multiple models.
+
+Select the three variables more correlated with life expectancy:
+
+```{r message = FALSE}
+high.cor <- LE.cor %>% mutate(abs_cor = abs(correlation)) %>% arrange(desc(abs_cor)) %>% top_n(3) %>% select(-correlation)
+high.cor
+```
+
+Select variables from dataset and remove missing values:
+
+```{r}
+
+df.2014.vars <- select(df.2014, c(Life.expectancy, Income.composition.of.resources, Schooling, Adult.Mortality))
+
+```
+
+Fit a linear regression model:
+
+```{r message = FALSE}
+lm.fit1 <- lm(Life.expectancy ~ Income.composition.of.resources + Schooling + Adult.Mortality, data = df.2014.vars)
+summary(lm.fit1)
+```
+
+Crossvalidation:
+
+Metrics for each CV fold:
+
+```{r message = FALSE}
+library(caret)
+
+cv.f <- function(df, var, model, k){
+  set.seed(1)
+  folds <- createFolds(df[, var], k = k)
+  res <- data.frame(MSE = 0, RMSE = 0, MAE = 0, AdjRSquared = 0)
+  for(i in 1:length(folds)){
+    lm.i <- lm(model, df[-folds[[i]], ])
+    residuals <- resid(lm.i)
+    res[i, ] <- c(mean(residuals^2), sqrt(mean(residuals^2)), mean(abs(residuals)), summary(lm.i)$adj.r.squared)
+  }
+  return(res)
+}
+cv.f(df.2014.vars, var = "Life.expectancy", model = "Life.expectancy ~ Income.composition.of.resources + Schooling + Adult.Mortality", k = 10)
+```
+
+Overall CV metrics:
+
+```{r}
+apply(cv.f(df.2014.vars, var = "Life.expectancy", model = "Life.expectancy ~ Income.composition.of.resources + Schooling + Adult.Mortality", k = 10), 2, mean)
+```
+
+
+• Provide interpretation of the regression coefficients in the model including hypothesis testing, interpretation of regression coefficients, and confidence intervals. It’s also good to mention the Practical vs Statistical significance of the predictors.
+
+For Income composition of resources and Adult Mortality, the hypothesis that the coefficients are equal to zero can be rejected, thus these variables are statistically significant for the regression model. The linear model explains `r round(100 * summary(lm.fit1)$adj.r.squared, 1)`% of the variability in life expectancy. Overall, the linear regression model is statistically significant, as shown by the F-statistic p-value. 
+
+The intercept, `r round(coef(lm.fit1)[[1]], 1)`, is the expected mean value of life expectancy (in years) when all the independent variables are zero. Life expectancy will increase by `r round(coef(lm.fit1)[[2]], 1)` years for each one unit increase in Income composition of resources. Life expectancy will increase by `r round(coef(lm.fit1)[[3]], 2)` years for each one unit increase in Schooling. Life expectancy will decrease by `r abs(round(coef(lm.fit1)[[4]], 2))` years for each one unit increase in Adult Mortality.     
+
+
+• Fit a second model with the goal to produce the best predictions possible.  Interpretation is no longer important so you can get as complicated as you like.  Use feature selection techniques to avoid under/over fitting.  Compare this model with your first, highly interpretable model, and comment on if this second model brings additional value or the first model is preferred.
+
+Remove Population from the dataset as it has a high number of missing values and a low correlation with life expectancy. Also remove Country and Year, and then remove all missing values:
+
+```{r}
+df.2014 <- select(df.2014, -c(Population, Country, Year))
+df.2014 <- na.omit(df.2014)
+```
+
+Fit linear regression with all the variables in the dataset:
+
+```{r}
+lm.fit2 <- lm(Life.expectancy ~ ., data = df.2014)
+summary(lm.fit2)
+```
+
+
+Conduct feature selection by stepwise regression:
+
+Forward stepwise regression:
+
+```{r message = FALSE}
+library(RcmdrMisc)
+forward.lm <- stepwise(lm.fit2, direction = "forward", trace = 0)
+```
+
+```{r}
+summary(forward.lm)
+```
+
+Backward stepwise regression:
+
+```{r message = FALSE}
+backward.lm <- stepwise(lm.fit2, direction = "backward", trace = 0)
+summary(backward.lm)
+```
+
+The forward and backward stepwise methods produced the same model after feature selection.
+
+
+Crossvalidation:
+
+Metrics for each CV fold:
+
+```{r}
+cv.f(df.2014, var = "Life.expectancy", model = "Life.expectancy ~ Adult.Mortality + Total.expenditure + 
+    HIV.AIDS + Income.composition.of.resources", k = 10)
+```
+
+Overall CV metrics:
+
+```{r}
+apply(cv.f(as.data.frame(df.2014), var = "Life.expectancy", model = "Life.expectancy ~ Adult.Mortality + Total.expenditure + 
+    HIV.AIDS + Income.composition.of.resources", k = 10), 2, mean)
+```
+
+The model obtained after feature selection is preferred over the initial model, as the second model explains a higher proportion of the variability of the response variable and the crossvalidation metrics show a lower prediction error.
+
