@@ -1,14 +1,13 @@
 _Meetings:_
-* 6/3 8:00p CT / 9:00p ET
 * 6/5 4:00p CT / 5:00p ET
-* TBD
+* 6/7 7:00p CT / 8:oop ET
 
 ## Notes from EDA
-* Outliers: none
+* Outliers: 
 * missing data: worldbank.org = missing values to fill in populations
 * classification of developing/developed (ie France was developing... many be up for debate) 
 
-## Next steps: 
+## Next steps from 5/31 meeting: 
 * multicolinearity = VIF inflation, variables coorelated with each other
     ** colinearity removing those just correlated to the response variable (Life exp) 
     ** efficient: remove multicol second, then do variable selction (if theres a ton of variables)
@@ -23,5 +22,8 @@ _Meetings:_
 
 ## Variable selection: 
 - try running with school and then running without/ see if variable selection pulls it out naturally
+
+## Next steps from 6/7 meeting: 
+* Outliers, run included & excluded in model to ensure no changes in performance
 
 
