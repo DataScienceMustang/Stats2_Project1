@@ -22,6 +22,13 @@ library(ggcorrplot)
 library(car)
 library(olsrr)
 
+#Adam's Connections
+#life <- read.csv(file = "F:/R For Real/Stats2 Project 1/Life Expectancy Data.csv")
+
+#Anish's Connections
+#life <- read.csv("Life Expectancy Data.csv")
+
+#Grace's Connections
 life <-read.csv("C:/Users/david/OneDrive/Desktop/AppliedStats/6372_AppliedStats_GraceLang/Project1/LifeExpectancyData.csv")
 #life <-read.csv("C:/Users/Dave/Desktop/AppliedStats/Stats2_Project1/LifeExpectancyData.csv")
 
@@ -57,6 +64,7 @@ Schooling: Number of years of Schooling(years)
  * Looks like there's a couple of positive correlations with life expectancy: income.compostion & schooling
  * Adult mortality seems to have a gender split, but cannot determine for certain
  * No outward evidence of any of the parameters having a non-linear relationship (adding a quadratic)
+ 
 ```{r plots}
 #Review the correlaton of data to life expectancy
 par(mfrow=c(3,6))
@@ -159,29 +167,76 @@ Life14$Population[149] = 13420000
 Life14$Population[42] = 11310000
 ```
 
+
+```{r}
+# Fixing 27 - 0 Percent Expenditures - Likely going to turn this variable into a categorical with 3-5 levels depending on spread
+Life14$percentage.expenditure[11] = 748.36
+Life14$percentage.expenditure[20] = 115.35
+Life14$percentage.expenditure[28] = 16.85
+Life14$percentage.expenditure[39] = 34.78
+Life14$percentage.expenditure[44] = 1249.23
+Life14$percentage.expenditure[46] = 2.68
+Life14$percentage.expenditure[51] = 48.66
+Life14$percentage.expenditure[54] = 2.82
+Life14$percentage.expenditure[61] = 4.93
+Life14$percentage.expenditure[77] = 192.78
+Life14$percentage.expenditure[89] = 35.5
+Life14$percentage.expenditure[90] = 13.79
+Life14$percentage.expenditure[95] = 197.84
+Life14$percentage.expenditure[107] = 102.43
+Life14$percentage.expenditure[131] = 1093.43
+Life14$percentage.expenditure[132] = 113.87
+Life14$percentage.expenditure[136] = 189.84
+Life14$percentage.expenditure[137] = 178.51
+Life14$percentage.expenditure[146] = 1024.94
+Life14$percentage.expenditure[159] = 31.65
+Life14$percentage.expenditure[162] = 219.74
+Life14$percentage.expenditure[173] = 3682.48
+Life14$percentage.expenditure[174] = 11.47
+Life14$percentage.expenditure[175] = 4541.8
+Life14$percentage.expenditure[179] = 235.35
+Life14$percentage.expenditure[180] = 48.82
+Life14$percentage.expenditure[181] = 12.9
+```
+
+```{r}
+# Fixing the 10 missing school variables - well except somalia (setting to 0) - might considering leaving somlia out it has almost no data
+Life14$Schooling[28] = 5.2
+Life14$Schooling[44] = 12.7
+Life14$Schooling[45] = 10.8
+Life14$Schooling[46] = 6.8
+Life14$Schooling[131] = 12.2
+Life14$Schooling[132] = 11.6
+Life14$Schooling[149] = 0
+Life14$Schooling[173] = 17.4
+Life14$Schooling[174] = 8
+Life14$Schooling[175] = 16.3
+```
+
 ```{r replacing NAs with Mean}
 #What variables are still missing
 gg_miss_var(Life14)
 
 #Replacing NAs with the mean of the column
-Life14$Schooling[is.na(Life14$Schooling)] <- round(mean(Life14$Schooling, na.rm = TRUE))
-Life14$Income.composition.of.resources[is.na(Life14$Income.composition.of.resources)] <- round(mean(Life14$Income.composition.of.resources, na.rm = TRUE))
-Life14$Hepatitis.B[is.na(Life14$Hepatitis.B)] <- round(mean(Life14$Hepatitis.B, na.rm = TRUE))
-Life14$Total.expenditure[is.na(Life14$Total.expenditure)] <- round(mean(Life14$Total.expenditure, na.rm = TRUE))
-Life14$thinness..1.19.years[is.na(Life14$thinness..1.19.years)] <- round(mean(Life14$thinness..1.19.years, na.rm = TRUE))
-Life14$thinness.5.9.years[is.na(Life14$thinness.5.9.years)] <- round(mean(Life14$thinness.5.9.years, na.rm = TRUE))
-Life14$BMI[is.na(Life14$BMI)] <- round(mean(Life14$BMI, na.rm = TRUE))
-Life14$Alcohol[is.na(Life14$Alcohol)] <- round(mean(Life14$Alcohol, na.rm = TRUE))
+#Life14$Schooling[is.na(Life14$Schooling)] <- round(mean(Life14$Schooling, na.rm = TRUE))
+#Life14$Income.composition.of.resources[is.na(Life14$Income.composition.of.resources)] <- #round(mean(Life14$Income.composition.of.resources, na.rm = TRUE))
+#Life14$Hepatitis.B[is.na(Life14$Hepatitis.B)] <- round(mean(Life14$Hepatitis.B, na.rm = TRUE))
+#Life14$Total.expenditure[is.na(Life14$Total.expenditure)] <- round(mean(Life14$Total.expenditure, na.rm = TRUE))
+#Life14$thinness..1.19.years[is.na(Life14$thinness..1.19.years)] <- round(mean(Life14$thinness..1.19.years, na.rm = TRUE))
+#Life14$thinness.5.9.years[is.na(Life14$thinness.5.9.years)] <- round(mean(Life14$thinness.5.9.years, na.rm = TRUE))
+#Life14$BMI[is.na(Life14$BMI)] <- round(mean(Life14$BMI, na.rm = TRUE))
+#Life14$Alcohol[is.na(Life14$Alcohol)] <- round(mean(Life14$Alcohol, na.rm = TRUE))
 ```
 
 ```{r outliers}
 
-#removing the country name
+#removing the country name & year as they do not provide any prediction value for Life Expectancy 
 Life14_VIF <- Life14[,-c(1,2)]
 
 #Running full regression model
 full.model <- lm(Life.expectancy~.,data=Life14_VIF)
 vif(full.model)
+ols_plot_comp_plus_resid(full.model)
 
 #Observe residuals and outliers
 par(mfrow=c(2,2))
@@ -333,4 +388,39 @@ index<-which(testASE==min(testASE))
 points(index,testASE[index],col="red",pch=10)
 rss<-summary(reg.fwd)$rss
 lines(1:19,rss,lty=3,col="blue")  #this line isn't populating
+```
+
+```{r tree}
+#Building a tree out, based on ALL variables from the regression model
+par(mfrow=c(1,1))
+tree.life<-tree(Life.expectancy~.,Life14_VIF,minsize=5)
+summary(tree.life)
+plot(tree.life)
+text(tree.life,pretty=0)
+
+#Perform CV to deterine if we need to prune the tree. -- 7 parameters was the lowest
+set.seed(1234)
+cv.life<-cv.tree(tree.life,FUN=prune.tree,method="deviance")
+plot(cv.life)
+
+
+#Building a tree out, based on SELECT variables from the regression model
+par(mfrow=c(1,1))
+tree.life2<-tree(Life.expectancy ~ Schooling + Adult.Mortality + HIV.AIDS + GDP + thinness.5.9.years + Diphtheria + Alcohol,Life14_VIF,minsize=5)
+summary(tree.life2)
+plot(tree.life2)
+text(tree.life2,pretty=0)
+
+#Perform CV to deterine if we need to prune the tree. -- All 7 parameters was the lowest
+set.seed(1234)
+cv.life2<-cv.tree(tree.life2,FUN=prune.tree,method="deviance")
+plot(cv.life2)
+
+
+#Fitting a final model for predicting future values. 
+#both versions of the tree identified that 7 parameters was the best fit
+prune.life=prune.tree(tree.life,best=7)
+plot(prune.life)
+text(prune.life,pretty=0)
+
 ```
