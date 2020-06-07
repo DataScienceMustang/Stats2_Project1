@@ -1,0 +1,389 @@
+---
+title: "Combined_Stats2_Project1_AC_AP_GL"
+author: "Adam Canton, Anish Patel & Grace Lang"
+date: "6/7/2020"
+output: word_document
+---
+
+Kaggle link for data reference: https://www.kaggle.com/kumarajarshi/life-expectancy-who
+
+```{r setup, include=FALSE}
+library(magrittr)
+library(dplyr)
+library(tidyr)
+library(naniar)
+library(ggplot2)
+library(plotly)
+library(forcats)
+library(ggExtra)
+library(glmnet)
+library(GGally)
+library(ggcorrplot)
+library(car)
+library(olsrr)
+
+#Adam's Connections
+#life <- read.csv(file = "F:/R For Real/Stats2 Project 1/Life Expectancy Data.csv")
+
+#Anish's Connections
+#life <- read.csv("Life Expectancy Data.csv")
+
+#Grace's Connections
+life <-read.csv("C:/Users/david/OneDrive/Desktop/AppliedStats/6372_AppliedStats_GraceLang/Project1/LifeExpectancyData.csv")
+#life <-read.csv("C:/Users/Dave/Desktop/AppliedStats/Stats2_Project1/LifeExpectancyData.csv")
+
+
+#Just pull out 2014 into the data
+Life14 <- subset(life, Year==2014)
+summary(Life14)
+```
+#Column definitions:
+Adult.mortality: Adult Mortality Rates of both sexes (probability of dying between 15 and 60 years per 1000 population)
+Infant.death: Number of Infant Deaths per 1000 population
+Alcohol: Alcohol, recorded per capita (15+) consumption (in litres of pure alcohol)
+percentage expenditure: Expenditure on health as a percentage of Gross Domestic Product per capita(%)
+Hepatitis B: Hepatitis B (HepB) immunization coverage among 1-year-olds (%)
+Measles - number of reported cases per 1000 population
+BMI: Average Body Mass Index of entire population
+Under-five-deaths: Number of under-five deaths per 1000 population
+Polio: Polio (Pol3) immunization coverage among 1-year-olds (%)
+Total expenditure: General government expenditure on health as a percentage of total government expenditure (%)
+Diphtheria: Diphtheria tetanus toxoid and pertussis (DTP3) immunization coverage among 1-year-olds (%)
+HIV/AIDS: Deaths per 1 000 live births HIV/AIDS (0-4 years)
+GDP: Gross Domestic Product per capita (in USD)
+Population: Population of the country
+thinness: Prevalence of thinness among children and adolescents for Age 10 to 19 (% )
+Thinness 5-9: Prevalence of thinness among children for Age 5 to 9(%)
+income composition: Human Development Index in terms of income composition of resources (index ranging from 0 to 1)
+Schooling: Number of years of Schooling(years)
+
+
+##Things to note from summary stats:
+ * 83% of data comes from developing countries, life exp may be lower.
+ * Mean life expectancy is 71.54 yr old
+ * The max for Measles seems outrageously high 79k - which country? outlier?
+ * Looks like there's a couple of positive correlations with life expectancy: income.compostion & schooling
+ * Adult mortality seems to have a gender split, but cannot determine for certain
+ * No outward evidence of any of the parameters having a non-linear relationship (adding a quadratic)
+ 
+ # Fixing NA's in GDP
+```{r}
+Life14$GDP[159] = 2520.2027
+Life14$GDP[11] = 29436.13
+Life14$GDP[20] = 3081.23
+Life14$GDP[28] = 1559.38
+Life14$GDP[39] = 6208.58
+Life14$GDP[44] = 19771.65
+Life14$GDP[45] = 1568.63
+Life14$GDP[46] = 352.82
+Life14$GDP[51] = 3378.68
+Life14$GDP[54] = 1209.68
+Life14$GDP[61] = 607.21
+Life14$GDP[77] = 5608.62
+Life14$GDP[89] = 1279.64
+Life14$GDP[90] = 1998.49
+Life14$GDP[95] = 6466.52
+Life14$GDP[107] = 2971.73
+Life14$GDP[131] = 27802.96
+Life14$GDP[132] = 2674.35
+Life14$GDP[136] = 8743.89
+Life14$GDP[137] = 6684.67
+Life14$GDP[146] = 18671.59
+Life14$GDP[162] = 5487.92
+Life14$GDP[173] = 47614.61
+Life14$GDP[174] = 1000.00
+Life14$GDP[175] = 55025.13
+Life14$GDP[179] = 16053.24
+Life14$GDP[180] = 2030.31
+Life14$GDP[181] = 1674.28
+```
+# Fixing Population NA's
+```{r}
+Life14$Population[159] = 18715672
+Life14$Population[11] = 370633
+Life14$Population[20] = 10710000
+Life14$Population[28] = 22650000
+Life14$Population[39] = 5244359
+Life14$Population[44] = 10510000
+Life14$Population[45] = 25500000
+Life14$Population[46] = 10780263
+Life14$Population[51] = 90420000
+Life14$Population[54] = 5580000
+Life14$Population[61] = 2024000
+Life14$Population[77] = 77470000
+Life14$Population[89] = 5836000
+Life14$Population[90] = 6640000
+Life14$Population[95] = 6362000
+Life14$Population[107] = 107446
+Life14$Population[131] = 50750000
+Life14$Population[132] = 3556000
+Life14$Population[136] = 178296
+Life14$Population[137] = 108861
+Life14$Population[146] = 5420000
+Life14$Population[162] = 2070000
+Life14$Population[173] = 64350000
+Life14$Population[174] = 49960000
+Life14$Population[175] = 318400000
+Life14$Population[179] = 30050000
+Life14$Population[180] = 91710000
+Life14$Population[181] = 25820000
+Life14$Population[130] = 2459000
+Life14$Population[145] = 5470000
+Life14$Population[172] = 9214000
+Life14$Population[88] = 3691000
+Life14$Population[12] = 1336000
+Life14$Population[140] = 30920000
+Life14$Population[14] = 284825
+Life14$Population[5] = 92562
+Life14$Population[66] = 108902
+Life14$Population[116] = 4510000
+Life14$Population[24] = 409769
+Life14$Population[121] = 4027000
+Life14$Population[149] = 13420000
+Life14$Population[42] = 11310000
+```
+# Fixing 27 - 0 Percent Expenditures - Likely going to turn this variable into a categorical with 3-5 levels depending on spread
+```{r}
+Life14$percentage.expenditure[11] = 748.36
+Life14$percentage.expenditure[20] = 115.35
+Life14$percentage.expenditure[28] = 16.85
+Life14$percentage.expenditure[39] = 34.78
+Life14$percentage.expenditure[44] = 1249.23
+Life14$percentage.expenditure[46] = 2.68
+Life14$percentage.expenditure[51] = 48.66
+Life14$percentage.expenditure[54] = 2.82
+Life14$percentage.expenditure[61] = 4.93
+Life14$percentage.expenditure[77] = 192.78
+Life14$percentage.expenditure[89] = 35.5
+Life14$percentage.expenditure[90] = 13.79
+Life14$percentage.expenditure[95] = 197.84
+Life14$percentage.expenditure[107] = 102.43
+Life14$percentage.expenditure[131] = 1093.43
+Life14$percentage.expenditure[132] = 113.87
+Life14$percentage.expenditure[136] = 189.84
+Life14$percentage.expenditure[137] = 178.51
+Life14$percentage.expenditure[146] = 1024.94
+Life14$percentage.expenditure[159] = 31.65
+Life14$percentage.expenditure[162] = 219.74
+Life14$percentage.expenditure[173] = 3682.48
+Life14$percentage.expenditure[174] = 11.47
+Life14$percentage.expenditure[175] = 4541.8
+Life14$percentage.expenditure[179] = 235.35
+Life14$percentage.expenditure[180] = 48.82
+Life14$percentage.expenditure[181] = 12.9
+```
+# Fixing the 10 missing school variables - well except somalia (setting to 0) - might considering leaving somlia out it has almost no data
+```{r}
+Life14$Schooling[28] = 5.2
+Life14$Schooling[44] = 12.7
+Life14$Schooling[45] = 10.8
+Life14$Schooling[46] = 6.8
+Life14$Schooling[131] = 12.2
+Life14$Schooling[132] = 11.6
+Life14$Schooling[149] = 0
+Life14$Schooling[173] = 17.4
+Life14$Schooling[174] = 8
+Life14$Schooling[175] = 16.3
+```
+#What variables are still missing
+```{r replacing NAs with Mean}
+gg_miss_var(Life14)
+
+#Can I add the avgs into the NAs without a lot of shift in data
+#Life14 %>% ggplot(aes(x = Income.composition.of.resources)) + geom_histogram() #normally distributed, low effect 2% change in mean
+#Life14 %>% ggplot(aes(x = Hepatitis.B)) + geom_histogram() #left-skewed, low effect 0% change in mean
+#Life14 %>% ggplot(aes(x = Total.expenditure)) + geom_histogram() #normally distributed, low effect 0% change in mean
+#Life14 %>% ggplot(aes(x = thinness.5.9.years)) + geom_histogram() #right-skewerd, low effect 0% change in mean
+#Life14 %>% ggplot(aes(x = thinness..1.19.years)) + geom_histogram() #right-skewerd, low effect 0% change in mean
+#Life14 %>% ggplot(aes(x = BMI)) + geom_histogram() #normally distributed, low effect 0% change in mean
+#Life14 %>% ggplot(aes(x = Alcohol)) + geom_histogram() #right-skewerd, low effect 0% change in mean
+
+#Replacing NAs with the mean of the column
+Life14$Income.composition.of.resources[is.na(Life14$Income.composition.of.resources)] <- round(mean(Life14$Income.composition.of.resources, na.rm = TRUE))
+Life14$Hepatitis.B[is.na(Life14$Hepatitis.B)] <- round(mean(Life14$Hepatitis.B, na.rm = TRUE))
+Life14$Total.expenditure[is.na(Life14$Total.expenditure)] <- round(mean(Life14$Total.expenditure, na.rm = TRUE))
+Life14$thinness..1.19.years[is.na(Life14$thinness..1.19.years)] <- round(mean(Life14$thinness..1.19.years, na.rm = TRUE))
+Life14$thinness.5.9.years[is.na(Life14$thinness.5.9.years)] <- round(mean(Life14$thinness.5.9.years, na.rm = TRUE))
+Life14$BMI[is.na(Life14$BMI)] <- round(mean(Life14$BMI, na.rm = TRUE))
+Life14$Alcohol[is.na(Life14$Alcohol)] <- round(mean(Life14$Alcohol, na.rm = TRUE))
+```
+
+#Visualizing some of the data
+
+Boxplot of life expectancy by country status:
+```{r}
+df.2014 %>% ggplot(aes(y = Life.expectancy)) + geom_boxplot() + facet_wrap(~Status)
+```
+
+Pairwise plots for selected variables:
+```{r message = FALSE, warning = FALSE}
+df2 <- select(df.2014, c(Life.expectancy, Adult.Mortality, Total.expenditure, HIV.AIDS, Income.composition.of.resources, Schooling))
+library(GGally)
+ggpairs(df2)
+```
+
+Correlation between life expectancy and all the numeric independent variables:
+```{r}
+cor.xy <- cor(df.2014 %>% select(-c(Country, Year, Status)), use = "complete.obs")
+LE.cor <- data.frame(var = rownames(cor.xy)[-1], correlation = cor.xy[-1, 1])
+LE.cor %>% ggplot(aes(x = var, y = correlation)) + geom_col() + coord_flip()
+```
+
+# Checking correlations between variables that are missing data and variables I think may make good substitutes and are not missing data.
+It seems that Schooling is a good replacement for income.comp though it seems as though income.comp has a slightly better relationship with life expectancy
+I think Im going to go with Schooling as the more complete variable
+Diphtheria and HepB also seem like good substitutes and diptheria is the more highly correlated with life expectancy going to throw out income.comp, and HepB, along with year, country, status to check correlations in next chunk.
+```{r}
+corr <- Life14 %>% 
+  select("Income.composition.of.resources", "Hepatitis.B", "Diphtheria", "Schooling", "Measles", "Life.expectancy", "GDP", "Polio") %>%
+  drop_na()
+
+corr <- round(cor(corr), 2)
+
+ggcorrplot(corr, hc.order = TRUE, type = "lower",
+           lab = TRUE, lab_size = 3, method = "circle",
+           colors = c("tomato2", "white", "springgreen3"),
+           title = "Correlations of all relevant variables",
+           ggtheme = theme_bw())
+```
+# Excluded factors here have been selected to due high (>0.9) correlations or are not numeric in nature (Status...)
+The results here show that we can likely get rid of: a thinness category, either infant deaths or deaths under 5, and gdp or percent.expenditure
+```{r}
+# http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html#Correlogram
+
+exclude_factors <- c("Country", "Status", "Year", "Hepatitis.B", "Income.composition.of.resources")
+
+corr <- Life14 %>% select( -all_of(exclude_factors)) %>% drop_na()
+
+corr <- round(cor(corr), 2)
+
+ggcorrplot(corr, hc.order = TRUE, type = "lower",
+           lab = TRUE, lab_size = 3, method = "circle",
+           colors = c("tomato2", "white", "springgreen3"),
+           title = "Correlations of all relevant variables",
+           ggtheme = theme_bw())
+```
+
+```{r}
+# The variables I threw out are the ones that were missing data or least correlated with life expectancy - 
+# Though admittedly sometimes the difference was small
+# Throw out - infant deaths, thinness 1-19, and percent expenditure
+# no more significant correlations between explanatory variables - time to look at selection
+
+exclude_factors <- c("Country", "Status", "Year", "Hepatitis.B", 
+                     "Income.composition.of.resources", "infant.deaths", "thinness..1.19.years", "percentage.expenditure")
+
+corr <- Life14 %>% select( -all_of(exclude_factors)) %>% drop_na()
+
+corr <- round(cor(corr), 2)
+
+ggcorrplot(corr, hc.order = TRUE, type = "lower",
+           lab = TRUE, lab_size = 3, method = "circle",
+           colors = c("tomato2", "white", "springgreen3"),
+           title = "Correlations of all relevant variables",
+           ggtheme = theme_bw())
+```
+
+```{r}
+# Naming new set Life14Select - to signify that I have removed some variables already
+# only lost 4 rows from dropping NA, acceptable loss?
+Life14Select = Life14 %>% select( -all_of(exclude_factors)) %>% drop_na()
+```
+
+```{r}
+# Checking that none of whats left has anything missing
+apply(Life14Select, 2, function(x) sum(is.na(x)))
+```
+
+```{r}
+# Set training and Testing Sets
+set.seed(1234)
+index<-sample(1:dim(Life14Select)[1],90,replace=F)
+train<-Life14Select[index,]
+test<-Life14Select[-index,]
+```
+
+```{r}
+# Forward Selection - BIC Suggests 5 predictors - Mallow CP suggests 5 
+reg.fwd=regsubsets(Life.expectancy~.,data=train,method="forward",nvmax=20)
+bics<-summary(reg.fwd)$bic
+plot(1:13,bics,type="l",ylab="BIC",xlab="# of predictors")
+index<-which(bics==min(bics))
+points(index,bics[index],col="red",pch=10)
+```
+
+```{r}
+# Adjr2 suggests up to 9
+adjr2<-summary(reg.fwd)$adjr2
+plot(1:13,adjr2,type="l",ylab="Adjusted R-squared",xlab="# of predictors")
+index<-which(adjr2==max(adjr2))
+points(index,adjr2[index],col="red",pch=10)
+```
+
+```{r}
+MallowCP <- summary(reg.fwd)$cp
+plot(1:13,MallowCP,type="l",ylab="Mallow's CP",xlab="# of predictors")
+index<-which(MallowCP==min(MallowCP))
+points(index,MallowCP[index],col="red",pch=10)
+```
+
+```{r}
+# Looking for a good model using Olsrr going to start with stepwise - using p-values as target values
+model1 <- lm(Life.expectancy ~ ., data = Life14Select)
+ols_step_both_p(model1)
+vif(model1)
+```
+```{r}
+model1 <- lm(Life.expectancy ~ Schooling + Adult.Mortality + HIV.AIDS + GDP + thinness.5.9.years + Diphtheria + Alcohol, data = Life14Select)
+summary(model1)
+vif(model1)
+```
+
+
+```{r}
+# Checking fit of model 1 - we actually look really good here. We have 2 points that may be problematic #28 Ivory Coast and #143 Seychelle 
+# unsure of why this is nothing really stand out about them.
+ols_plot_resid_lev(model1)
+# nice looking random cloud
+ols_plot_resid_fit(model1)
+# Here we see the low end looks a bit un-normal but overall is largely normal
+ols_plot_resid_qq(model1)
+# as we saw in the QQ plot above there is some left skew here but largely looks normal
+ols_plot_resid_hist(model1)
+```
+
+# Regression Tree Model
+```{r tree}
+#Building a tree out, based on ALL variables from the regression model
+par(mfrow=c(1,1))
+tree.life<-tree(Life.expectancy~.,Life14_VIF,minsize=5)
+summary(tree.life)
+plot(tree.life)
+text(tree.life,pretty=0)
+
+#Perform CV to deterine if we need to prune the tree. -- 7 parameters was the lowest
+set.seed(1234)
+cv.life<-cv.tree(tree.life,FUN=prune.tree,method="deviance")
+plot(cv.life)
+
+
+#Building a tree out, based on SELECT variables from the regression model
+par(mfrow=c(1,1))
+tree.life2<-tree(Life.expectancy ~ Schooling + Adult.Mortality + HIV.AIDS + GDP + thinness.5.9.years + Diphtheria + Alcohol,Life14_VIF,minsize=5)
+summary(tree.life2)
+plot(tree.life2)
+text(tree.life2,pretty=0)
+
+#Perform CV to deterine if we need to prune the tree. -- All 7 parameters was the lowest
+set.seed(1234)
+cv.life2<-cv.tree(tree.life2,FUN=prune.tree,method="deviance")
+plot(cv.life2)
+
+
+#Fitting a final model for predicting future values. 
+#both versions of the tree identified that 7 parameters was the best fit
+prune.life=prune.tree(tree.life,best=7)
+plot(prune.life)
+text(prune.life,pretty=0)
+
+```
