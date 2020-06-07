@@ -3,7 +3,7 @@ _Meetings:_
 * 6/7 7:00p CT / 8:oop ET
 
 ## Notes from EDA
-* Outliers: 
+* Outliers: differs by model and parameters included
 * missing data: worldbank.org = missing values to fill in populations
 * classification of developing/developed (ie France was developing... many be up for debate) 
 
@@ -23,7 +23,10 @@ _Meetings:_
 ## Variable selection: 
 - try running with school and then running without/ see if variable selection pulls it out naturally
 
-## Next steps from 6/7 meeting: 
+## Next steps for 6/7 meeting: 
+* Need to add in Adam's feature engineering to the final code - make sure it jives with the rest of the setup
 * Outliers, run included & excluded in model to ensure no changes in performance
+* Go through Final Code - draft and see which visualizations to keep in/remove
+* Talk about Anish's approach of removing correlated variables before running the model, he gets different coefficients based on this method (His include Adult Mortality, total expenditure, HIV, Income composition) vs (Schooling, Adult.mortality, HIV, GDP, thinness 5-9, Diphtheria, Alcohol) -- His might have a easier interpretation = then we could use full data set (no removals for the 2nd model within Q1)
 
 
