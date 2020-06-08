@@ -21,6 +21,9 @@ library(GGally)
 library(ggcorrplot)
 library(car)
 library(olsrr)
+library(rgl)
+library(tree)
+library(ISLR)
 
 #Adam's Connections
 #life <- read.csv(file = "F:/R For Real/Stats2 Project 1/Life Expectancy Data.csv")
@@ -206,25 +209,28 @@ Life14$thinness..1.19.years[is.na(Life14$thinness..1.19.years)] <- round(mean(Li
 Life14$thinness.5.9.years[is.na(Life14$thinness.5.9.years)] <- round(mean(Life14$thinness.5.9.years, na.rm = TRUE))
 Life14$BMI[is.na(Life14$BMI)] <- round(mean(Life14$BMI, na.rm = TRUE))
 Life14$Alcohol[is.na(Life14$Alcohol)] <- round(mean(Life14$Alcohol, na.rm = TRUE))
+
+#removing the country name & year as they do not provide any prediction value for Life Expectancy 
+Life14 <- Life14[,-c(1,2)]
 ```
 
 #Visualizing some of the data
 
 Boxplot of life expectancy by country status:
 ```{r}
-df.2014 %>% ggplot(aes(y = Life.expectancy)) + geom_boxplot() + facet_wrap(~Status)
+Life14 %>% ggplot(aes(y = Life.expectancy)) + geom_boxplot() + facet_wrap(~Status)
 ```
 
 Pairwise plots for selected variables:
 ```{r message = FALSE, warning = FALSE}
-df2 <- select(df.2014, c(Life.expectancy, Adult.Mortality, Total.expenditure, HIV.AIDS, Income.composition.of.resources, Schooling))
+df2 <- select(Life14, c(Life.expectancy, Adult.Mortality, Total.expenditure, HIV.AIDS, Income.composition.of.resources, Schooling))
 library(GGally)
 ggpairs(df2)
 ```
 
 Correlation between life expectancy and all the numeric independent variables:
 ```{r}
-cor.xy <- cor(df.2014 %>% select(-c(Country, Year, Status)), use = "complete.obs")
+cor.xy <- cor(Life14 %>% select(-c(Country, Year, Status)), use = "complete.obs")
 LE.cor <- data.frame(var = rownames(cor.xy)[-1], correlation = cor.xy[-1, 1])
 LE.cor %>% ggplot(aes(x = var, y = correlation)) + geom_col() + coord_flip()
 ```
@@ -284,21 +290,12 @@ ggcorrplot(corr, hc.order = TRUE, type = "lower",
            ggtheme = theme_bw())
 ```
 
-```{r}
-# Naming new set Life14Select - to signify that I have removed some variables already
-# only lost 4 rows from dropping NA, acceptable loss?
-Life14Select = Life14 %>% select( -all_of(exclude_factors)) %>% drop_na()
-```
-
-```{r}
-# Checking that none of whats left has anything missing
-apply(Life14Select, 2, function(x) sum(is.na(x)))
-```
+#Adam will update with Final Versions of his models
 
 ```{r}
 # Set training and Testing Sets
 set.seed(1234)
-index<-sample(1:dim(Life14Select)[1],90,replace=F)
+index<-sample(1:dim(Life14)[1],90,replace=F)
 train<-Life14Select[index,]
 test<-Life14Select[-index,]
 ```
@@ -329,12 +326,13 @@ points(index,MallowCP[index],col="red",pch=10)
 
 ```{r}
 # Looking for a good model using Olsrr going to start with stepwise - using p-values as target values
-model1 <- lm(Life.expectancy ~ ., data = Life14Select)
+model1 <- lm(Life.expectancy ~ ., data = Life14)
 ols_step_both_p(model1)
 vif(model1)
 ```
+
 ```{r}
-model1 <- lm(Life.expectancy ~ Schooling + Adult.Mortality + HIV.AIDS + GDP + thinness.5.9.years + Diphtheria + Alcohol, data = Life14Select)
+model1 <- lm(Life.expectancy ~ Schooling + Adult.Mortality + HIV.AIDS + GDP + thinness.5.9.years + Diphtheria + Alcohol, data = Life14)
 summary(model1)
 vif(model1)
 ```
@@ -356,7 +354,7 @@ ols_plot_resid_hist(model1)
 ```{r tree}
 #Building a tree out, based on ALL variables from the regression model
 par(mfrow=c(1,1))
-tree.life<-tree(Life.expectancy~.,Life14_VIF,minsize=5)
+tree.life<-tree(Life.expectancy~.,Life14,minsize=5)
 summary(tree.life)
 plot(tree.life)
 text(tree.life,pretty=0)
@@ -369,7 +367,7 @@ plot(cv.life)
 
 #Building a tree out, based on SELECT variables from the regression model
 par(mfrow=c(1,1))
-tree.life2<-tree(Life.expectancy ~ Schooling + Adult.Mortality + HIV.AIDS + GDP + thinness.5.9.years + Diphtheria + Alcohol,Life14_VIF,minsize=5)
+tree.life2<-tree(Life.expectancy ~ Schooling + Adult.Mortality + HIV.AIDS + GDP + thinness.5.9.years + Diphtheria + Alcohol,Life14,minsize=5)
 summary(tree.life2)
 plot(tree.life2)
 text(tree.life2,pretty=0)
