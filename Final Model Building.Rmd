@@ -1,0 +1,365 @@
+---
+title: "Cleaning Up"
+author: "Adam Canton"
+date: "6/7/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(class)
+library(caret)
+library(e1071)
+library(magrittr)
+library(ggplot2)
+library(dplyr)
+library(httr)
+library(naniar)
+library(tidyr)
+library(plotly)
+library(forcats)
+library(ggExtra)
+library(glmnet)
+library(GGally)
+library(ggcorrplot)
+library(car)
+library(olsrr)
+library(leaps)
+```
+
+```{r}
+#The function call designed by Dr. Turner
+predict.regsubsets =function (object , newdata ,id ,...){
+  form=as.formula (object$call [[2]])
+  mat=model.matrix(form ,newdata )
+  coefi=coef(object ,id=id)
+  xvars=names(coefi)
+  mat[,xvars]%*%coefi
+}
+```
+# Intitiation Block - reads in Data set makes all neccessary adjustments and additions
+```{r}
+# Read in the csv
+LifeExpectancyOG <- read.csv(file = "F:/R For Real/Stats2 Project 1/Life Expectancy Data.csv")
+
+# Subsetting down to 2014 - switching to Grace's variable names to make going between easier
+Life14 <- LifeExpectancyOG %>% filter(Year == 2014)
+
+# Fixing 27 NAs in GDP
+Life14$GDP[159] = 2520.2027
+Life14$GDP[11] = 29436.13
+Life14$GDP[20] = 3081.23
+Life14$GDP[28] = 1559.38
+Life14$GDP[39] = 6208.58
+Life14$GDP[44] = 19771.65
+Life14$GDP[45] = 1568.63
+Life14$GDP[46] = 352.82
+Life14$GDP[51] = 3378.68
+Life14$GDP[54] = 1209.68
+Life14$GDP[61] = 607.21
+Life14$GDP[77] = 5608.62
+Life14$GDP[89] = 1279.64
+Life14$GDP[90] = 1998.49
+Life14$GDP[95] = 6466.52
+Life14$GDP[107] = 2971.73
+Life14$GDP[131] = 27802.96
+Life14$GDP[132] = 2674.35
+Life14$GDP[136] = 8743.89
+Life14$GDP[137] = 6684.67
+Life14$GDP[146] = 18671.59
+Life14$GDP[162] = 5487.92
+Life14$GDP[173] = 47614.61
+Life14$GDP[174] = 1000.00
+Life14$GDP[175] = 55025.13
+Life14$GDP[179] = 16053.24
+Life14$GDP[180] = 2030.31
+Life14$GDP[181] = 1674.28
+
+# Fixing 41 Population NA's
+Life14$Population[159] = 18715672
+Life14$Population[11] = 370633
+Life14$Population[20] = 10710000
+Life14$Population[28] = 22650000
+Life14$Population[39] = 5244359
+Life14$Population[44] = 10510000
+Life14$Population[45] = 25500000
+Life14$Population[46] = 10780263
+Life14$Population[51] = 90420000
+Life14$Population[54] = 5580000
+Life14$Population[61] = 2024000
+Life14$Population[77] = 77470000
+Life14$Population[89] = 5836000
+Life14$Population[90] = 6640000
+Life14$Population[95] = 6362000
+Life14$Population[107] = 107446
+Life14$Population[131] = 50750000
+Life14$Population[132] = 3556000
+Life14$Population[136] = 178296
+Life14$Population[137] = 108861
+Life14$Population[146] = 5420000
+Life14$Population[162] = 2070000
+Life14$Population[173] = 64350000
+Life14$Population[174] = 49960000
+Life14$Population[175] = 318400000
+Life14$Population[179] = 30050000
+Life14$Population[180] = 91710000
+Life14$Population[181] = 25820000
+Life14$Population[130] = 2459000
+Life14$Population[145] = 5470000
+Life14$Population[172] = 9214000
+Life14$Population[88] = 3691000
+Life14$Population[12] = 1336000
+Life14$Population[140] = 30920000
+Life14$Population[14] = 284825
+Life14$Population[5] = 92562
+Life14$Population[66] = 108902
+Life14$Population[116] = 4510000
+Life14$Population[24] = 409769
+Life14$Population[121] = 4027000
+Life14$Population[149] = 13420000
+Life14$Population[42] = 11310000
+
+# Fixing 27 - 0 Percent Expenditures - Likely going to turn this variable into a categorical with 3-5 levels depending on spread
+Life14$percentage.expenditure[11] = 748.36
+Life14$percentage.expenditure[20] = 115.35
+Life14$percentage.expenditure[28] = 16.85
+Life14$percentage.expenditure[39] = 34.78
+Life14$percentage.expenditure[44] = 1249.23
+Life14$percentage.expenditure[46] = 2.68
+Life14$percentage.expenditure[51] = 48.66
+Life14$percentage.expenditure[54] = 2.82
+Life14$percentage.expenditure[61] = 4.93
+Life14$percentage.expenditure[77] = 192.78
+Life14$percentage.expenditure[89] = 35.5
+Life14$percentage.expenditure[90] = 13.79
+Life14$percentage.expenditure[95] = 197.84
+Life14$percentage.expenditure[107] = 102.43
+Life14$percentage.expenditure[131] = 1093.43
+Life14$percentage.expenditure[132] = 113.87
+Life14$percentage.expenditure[136] = 189.84
+Life14$percentage.expenditure[137] = 178.51
+Life14$percentage.expenditure[146] = 1024.94
+Life14$percentage.expenditure[159] = 31.65
+Life14$percentage.expenditure[162] = 219.74
+Life14$percentage.expenditure[173] = 3682.48
+Life14$percentage.expenditure[174] = 11.47
+Life14$percentage.expenditure[175] = 4541.8
+Life14$percentage.expenditure[179] = 235.35
+Life14$percentage.expenditure[180] = 48.82
+Life14$percentage.expenditure[181] = 12.9
+
+# Fixing the 10 missing school variables - well except somalia (setting to 0) - might considering leaving somlia out it has almost no data
+#Life14$Schooling[28] = 5.2
+Life14$Schooling[44] = 12.7
+Life14$Schooling[45] = 10.8
+Life14$Schooling[46] = 6.8
+Life14$Schooling[131] = 12.2
+Life14$Schooling[132] = 11.6
+Life14$Schooling[149] = 0
+Life14$Schooling[173] = 17.4
+Life14$Schooling[174] = 8
+Life14$Schooling[175] = 16.3
+
+# Replacing any NA's left with means of that column
+Life14$Schooling[is.na(Life14$Schooling)] <- round(mean(Life14$Schooling, na.rm = TRUE))
+Life14$Income.composition.of.resources[is.na(Life14$Income.composition.of.resources)] <- round(mean(Life14$Income.composition.of.resources, na.rm = TRUE))
+Life14$Hepatitis.B[is.na(Life14$Hepatitis.B)] <- round(mean(Life14$Hepatitis.B, na.rm = TRUE))
+Life14$Total.expenditure[is.na(Life14$Total.expenditure)] <- round(mean(Life14$Total.expenditure, na.rm = TRUE))
+Life14$thinness..1.19.years[is.na(Life14$thinness..1.19.years)] <- round(mean(Life14$thinness..1.19.years, na.rm = TRUE))
+Life14$thinness.5.9.years[is.na(Life14$thinness.5.9.years)] <- round(mean(Life14$thinness.5.9.years, na.rm = TRUE))
+Life14$BMI[is.na(Life14$BMI)] <- round(mean(Life14$BMI, na.rm = TRUE))
+Life14$Alcohol[is.na(Life14$Alcohol)] <- round(mean(Life14$Alcohol, na.rm = TRUE))
+
+# Lets Factorize things! 
+IncomeCompFactor = cut(Life14$Income.composition.of.resources, breaks = c(0,0.4,0.7,1), labels = c("Low", "Moderate", "High"))
+
+HepBfactor = cut(Life14$Hepatitis.B, breaks = c(0,25,50,75,100), labels = c("Deficient", "Low", "Moderate", "High"))
+
+PercentExpendFactor = cut(Life14$percentage.expenditure, breaks = c(0,5000,15000,20000), labels = c("Low", "Moderate", "High"))
+
+PopulationFactor = cut(Life14$Population, breaks = c(0, 3.612e+05,2.196e+07,1.294e+09), labels = c("Low", "Moderate", "High"))
+
+GdpFactor = cut(Life14$GDP, breaks = c(0,40000,80000,120000), labels = c("Low","Moderate","High"))
+
+SchoolFactor = cut(Life14$Schooling, breaks = c(0,12,16,21), labels = c("Low","Moderate", "High"))
+
+# Binding them back to Life14
+Life14 = cbind(Life14, HepBfactor, PercentExpendFactor, PopulationFactor, GdpFactor, SchoolFactor)
+
+#Fixing some errors where for some reason it wasn't picking up these 3
+Life14$PercentExpendFactor[45] = as.factor("Low")
+Life14$PercentExpendFactor[149] = as.factor("Low")
+Life14$SchoolFactor[149] = as.factor("Low")
+
+#adding log variables
+Life14 = Life14 %>% mutate(LHIV.AIDS = log(HIV.AIDS))
+Life14 = Life14 %>% mutate(Linfant.deaths = log(infant.deaths + 1))
+Life14 = Life14 %>% mutate(LUnder5Deaths = log(under.five.deaths + 1))
+Life14 = Life14 %>% mutate(LThin19 = log(thinness..1.19.years + 1))
+Life14 = Life14 %>% mutate(LGDP = log(GDP))
+
+# Creating scaled variables for knn testing
+Life14Scale = Life14
+Life14Scale$Life.expectancy = scale(Life14Scale$Life.expectancy) 
+Life14Scale$Adult.Mortality = scale(Life14Scale$Life.expectancy)
+Life14Scale$percentage.expenditure = scale(Life14Scale$Life.expectancy)
+Life14Scale$Diphtheria = scale(Life14Scale$Life.expectancy)
+Life14Scale$Hepatitis.B = scale(Life14Scale$Life.expectancy)
+Life14Scale$Income.composition.of.resources = scale(Life14Scale$Life.expectancy)
+Life14Scale$Schooling = scale(Life14Scale$Life.expectancy)
+Life14Scale$LHIV.AIDS = scale(Life14Scale$Life.expectancy)
+Life14Scale$Linfant.deaths = scale(Life14Scale$Life.expectancy)
+Life14Scale$LUnder5Deaths = scale(Life14Scale$Life.expectancy)
+Life14Scale$LThin19 = scale(Life14Scale$Life.expectancy)
+Life14Scale$LGDP = scale(Life14Scale$Life.expectancy)
+Life14Scale$Total.expenditure = scale(Life14Scale$Total.expenditure)
+```
+```{r}
+# Drop Country and year from sets - drops 2 variables - finalize the set
+exclude_factors <- c("Country", "Year")
+Life14 <- Life14 %>% select( -all_of(exclude_factors))
+```
+
+
+```{r}
+# Set training and testing Sets currently set to 70/30 128/55
+#set.seed(1234)
+index<-sample(1:dim(Life14)[1],128,replace=F)
+train<-Life14[index,]
+test<-Life14[-index,]
+
+reg.fwd=regsubsets(Life.expectancy~.,data=trainfull,method="forward",nvmax=20)
+
+bics<-summary(reg.fwd)$bic
+plot(1:20,bics,type="l",ylab="BIC",xlab="# of predictors")
+index<-which(bics==min(bics))
+points(index,bics[index],col="red",pch=10)
+
+adjr2<-summary(reg.fwd)$adjr2
+plot(1:20,adjr2,type="l",ylab="Adjusted R-squared",xlab="# of predictors")
+index<-which(adjr2==max(adjr2))
+points(index,adjr2[index],col="red",pch=10)
+
+MallowCP <- summary(reg.fwd)$cp
+plot(1:20,MallowCP,type="l",ylab="Mallow's CP",xlab="# of predictors")
+index<-which(MallowCP==min(MallowCP))
+points(index,MallowCP[index],col="red",pch=10)
+```
+
+```{r}
+modelgenerator <- lm(Life.expectancy ~ . , data = train)
+ols_step_both_aic(modelgenerator)
+#ols_step_both_aic(model3)
+```
+
+```{r}
+# 
+modeltest1 <- lm(Life.expectancy ~ Adult.Mortality + SchoolFactor + LHIV.AIDS + percentage.expenditure + Total.expenditure + Linfant.deaths , data = train)
+#summary(modeltest1)
+#vif(modeltest1)
+#ols_plot_resid_fit(modeltest1)
+#ols_plot_resid_lev(modeltest1)
+#ols_plot_resid_qq(modeltest1)
+#ols_plot_resid_hist(modeltest1)
+#ols_plot_cooksd_bar(modeltest1)
+#ols_step_both_aic(model4)
+```
+
+```{r}
+# 
+modeltest2 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + percentage.expenditure + 
+                   Linfant.deaths + Status + LGDP + Diphtheria , data = train)
+#summary(modeltest2)
+#vif(modeltest2)
+#ols_plot_resid_fit(modeltest2)
+#ols_plot_resid_lev(modeltest2)
+#ols_plot_resid_qq(modeltest2)
+#ols_plot_resid_hist(modeltest2)
+#ols_plot_cooksd_bar(modeltest2)
+```
+
+
+
+```{r}
+# RSE - 2.288
+modeltest4 <- lm(Life.expectancy ~ 
+                    Income.composition.of.resources:Schooling + Population + Measles + Hepatitis.B + Diphtheria + Polio + Total.expenditure + infant.deaths +
+                    under.five.deaths + log(HIV.AIDS)	+ BMI	+ thinness.5.9.years + thinness..1.19.years +	Alcohol +	percentage.expenditure +	GDP +	Status +
+                    Adult.Mortality	+ Income.composition.of.resources +	HIV.AIDS:Income.composition.of.resources + Schooling +
+                    percentage.expenditure:Income.composition.of.resources +	thinness..1.19.years:thinness.5.9.years +	HIV.AIDS:GDP +Hepatitis.B:Diphtheria +
+                    BMI:Schooling	+ Total.expenditure:GDP +	Adult.Mortality:Total.expenditure +	HIV.AIDS:Schooling +	under.five.deaths:thinness..1.19.years +
+                    Population:thinness..1.19.years +	Adult.Mortality:Polio +	Status:Total.expenditure +	Status:GDP + percentage.expenditure:Population +
+                    Alcohol:thinness.5.9.years +	infant.deaths:Population +	Alcohol:HIV.AIDS +	HIV.AIDS:Population +	BMI:under.five.deaths +
+                    Total.expenditure:thinness.5.9.years +	Total.expenditure:HIV.AIDS +	percentage.expenditure:HIV.AIDS +
+                    Diphtheria:Income.composition.of.resources +	Measles:HIV.AIDS +	Measles:Schooling +	Status:Schooling + Status:Measles +
+                    Status:Income.composition.of.resources +	Status:thinness.5.9.years	+ Status:Hepatitis.B +	percentage.expenditure:GDP +
+                    percentage.expenditure:Schooling +	GDP:Schooling +	Status:percentage.expenditure +	percentage.expenditure:Polio +	
+                    Polio:Total.expenditure	 + Status:Polio +	Measles:thinness..1.19.years	+ Population:thinness.5.9.years +	Polio:Diphtheria,
+                    data = trainfull)
+summary(modeltest4)
+vif(modeltest4)
+ols_plot_resid_fit(modeltest4)
+ols_plot_resid_lev(modeltest4)
+ols_plot_resid_qq(modeltest4)
+ols_plot_resid_hist(modeltest4)
+```
+
+```{r}
+predictions1 <- modeltest1 %>% predict(testfull)
+d1 = data.frame(R2 = R2(predictions1,testfull$Life.expectancy),RMSE = RMSE(predictions1,testfull$Life.expectancy), MAE = MAE(predictions1, testfull$Life.expectancy))
+
+predictions2 <- modeltest2 %>% predict(testfull)
+d2 = data.frame(R2 = R2(predictions2,testfull$Life.expectancy),RMSE = RMSE(predictions2,testfull$Life.expectancy), MAE = MAE(predictions2, testfull$Life.expectancy))
+
+predictions3 <- modeltest3 %>% predict(testfull)
+d3 = data.frame(R2 = R2(predictions3,testfull$Life.expectancy),RMSE = RMSE(predictions3,testfull$Life.expectancy), MAE = MAE(predictions3, testfull$Life.expectancy))
+
+predictions4 <- modeltest4 %>% predict(testfull)
+d4 = data.frame(R2 = R2(predictions4,testfull$Life.expectancy),RMSE = RMSE(predictions4,testfull$Life.expectancy), MAE = MAE(predictions4, testfull$Life.expectancy))
+```
+
+```{r}
+# Need to remark these values
+data.frame(RMSE = c(d1$RMSE, d2$RMSE, d3$RMSE, d4$RMSE), Model = c("1", "2", "3", "4"))
+```
+
+```{r}
+Pred1 <- data.frame(Value = predictions1, Model = "1")
+Pred2 <- data.frame(Value = predictions2, Model = "2")
+Pred3 <- data.frame(Value = predictions3, Model = "3")
+Pred4 <- data.frame(Value = predictions4, Model = "4")
+PredActual <- data.frame(ActualValue = testfull$Life.expectancy)
+PredAll <- rbind(Pred1, Pred2, Pred3, Pred4)
+PredActual <- rbind(PredActual,PredActual,PredActual,PredActual)
+PredAll <- cbind(PredAll, PredActual)
+```
+
+```{r}
+PredAll %>% ggplot(aes(x = Value, y = ActualValue, fill = Model)) + geom_point(aes(color = Model)) + geom_smooth(formula = y~x)+
+  facet_wrap(facets = PredAll$Model)
+```
+
+```{r}
+PredAll  %>% mutate(difference = (Value - ActualValue)) %>% group_by(Model) %>% 
+  summarise(RMSE = sqrt(sum(difference^2)/nrow(testfull))) %>%
+  ggplot(aes(x = reorder(Model,-RMSE), y = RMSE)) + geom_col(aes(fill = Model)) + 
+  geom_text(aes(label = round(RMSE, 4), vjust = -0.5)) + xlab("Model #") + ylab("RMSE on Test Set") + ggtitle("Model RMSE's 70/30 Cross Validation")
+```
+
+
+
+
+
+
+```{r}
+gc()
+```
+
+```{r}
+data.frame(R2 = R2(predictions1,testfull$Life.expectancy),RMSE = RMSE(predictions1,testfull$Life.expectancy), MAE = MAE(predictions1, testfull$Life.expectancy))
+```
+
+
+
+
+
