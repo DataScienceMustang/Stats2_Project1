@@ -34,7 +34,7 @@ for(i in iterations){
   modeltest2 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + percentage.expenditure + 
                    Linfant.deaths + Status + LGDP + Diphtheria , data = train)
   
-  modeltest3 <- lm(Life.expectancy ~ Adult.Mortality + , data = train)
+  modeltest3 <- lm(Life.expectancy ~ Adult.Mortality, data = train)
   
   # predictors and column building
   predictions1 <- modeltest1 %>% predict(test)
