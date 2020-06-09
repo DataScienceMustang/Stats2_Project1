@@ -211,7 +211,7 @@ Life14$BMI[is.na(Life14$BMI)] <- round(mean(Life14$BMI, na.rm = TRUE))
 Life14$Alcohol[is.na(Life14$Alcohol)] <- round(mean(Life14$Alcohol, na.rm = TRUE))
 
 #removing the country name & year as they do not provide any prediction value for Life Expectancy 
-Life14 <- Life14[,-c(1,2)]
+Life14 <- Life14[,-c(1,2)] 
 ```
 
 #Visualizing some of the data
