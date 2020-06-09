@@ -60,7 +60,7 @@ Model.Average.RMSE = cbind(rmse1, rmse2, rmse3)
 Model.Average.RMSE = Model.Average.RMSE[-1,]
 rmsedf = as.data.frame(Model.Average.RMSE)
 Means = colMeans(Model.Average.RMSE)
-SDs = colSds(Model.Average.RMSE)
+SDs = round(colSds(Model.Average.RMSE), 3)
 range1 = max(rmsedf$rmse1) - min(rmsedf$rmse1)
 range2 = max(rmsedf$rmse2) - min(rmsedf$rmse2)
 range3 = max(rmsedf$rmse3) - min(rmsedf$rmse3)
@@ -79,12 +79,90 @@ summary(Model.Average.RMSE)
 
 
 ```
-
 ```{r}
-class(Means)
+# Set knn vectors - these are the column #s that will be analyzed
+knnvector1 = c(3,6,12,20)
+knnvector2 = c(3,6,13,26:30)
+knnvector3 = c(3,6,13,20)
+
+# Start of Loop Variables
+iterations = 1:50
+i = 0
+knnrmse1 = c()
+knnrmse2 = c()
+knnrmse3 = c()
+
+# Loop start
+for(i in iterations){
+  # Create train and test sets
+  index<-sample(1:dim(Life14Scale)[1],128,replace=F)
+  train<-Life14Scale[index,]
+  test<-Life14Scale[-index,]
+
+
+  #KNN1
+  predknn1 <- knn.reg(train[,knnvector1], test[, knnvector1], train$Life.expectancy, k = 3)
+  Knn_Predictions_1 = as.data.frame(predknn1$pred)
+  names(Knn_Predictions_1)[1] <- "Predictions"
+
+  trial <- data.frame(Predictions = c(Knn_Predictions_1), Actual = c(test$Life.expectancy))
+
+  trial = trial %>% mutate(ResidualSq1 = (Predictions - Actual)^2)
+
+  RMSEknn1 = sqrt(sum((trial$ResidualSq1)/nrow(test)))
+  knnrmse1 = c(knnrmse1, RMSEknn1)
+
+  #KNN2
+  predknn2 <- knn.reg(train[,knnvector2], test[, knnvector2], train$Life.expectancy, k = 3)
+  Knn_Predictions_2 = as.data.frame(predknn2$pred)
+  names(Knn_Predictions_2)[1] <- "Predictions"
+
+  trial <- data.frame(Predictions = c(Knn_Predictions_2), Actual = c(test$Life.expectancy))
+
+  trial = trial %>% mutate(ResidualSq2 = (Predictions - Actual)^2)
+
+  RMSEknn2 = sqrt(sum((trial$ResidualSq2)/nrow(test)))
+  knnrmse2 = c(knnrmse2, RMSEknn2)
+
+  # KNN3
+  predknn3 <- knn.reg(train[,knnvector3], test[, knnvector3], train$Life.expectancy, k = 3)
+  Knn_Predictions_3 = as.data.frame(predknn3$pred)
+  names(Knn_Predictions_3)[1] <- "Predictions"
+
+  trial <- data.frame(Predictions = c(Knn_Predictions_3), Actual = c(test$Life.expectancy))
+
+  trial = trial %>% mutate(ResidualSq3 = (Predictions - Actual)^2)
+
+  RMSEknn3 = sqrt(sum((trial$ResidualSq3)/nrow(test)))
+  knnrmse3 = c(knnrmse3, RMSEknn3)
+  # End For
+}
+
+# putting the dataframe together and outputting relevant statistics
+Knn.Model.Average.RMSE = cbind(knnrmse1, knnrmse2, knnrmse3)
+Knn.Model.Average.RMSE = Knn.Model.Average.RMSE[-1,]
+knnrmsedf = as.data.frame(Knn.Model.Average.RMSE)
+Means = colMeans(Knn.Model.Average.RMSE)
+SDs = round(colSds(Knn.Model.Average.RMSE), 3)
+knnrange1 = max(knnrmsedf$knnrmse1) - min(knnrmsedf$knnrmse1)
+knnrange2 = max(knnrmsedf$knnrmse2) - min(knnrmsedf$knnrmse2)
+knnrange3 = max(knnrmsedf$knnrmse3) - min(knnrmsedf$knnrmse3)
+
+# Looking at range of each model to determine how variant it is - can also look at stats above
+Means
+print("Standard Devs")
+SDs
+print("ranges - measure of variance between train/test shuffles")
+print(paste("Model 1 Range" , round(knnrange1, 3)))
+print(paste("Model 2 Range" , round(knnrange2, 3)))
+print(paste("Model 3 Range" , round(knnrange3, 3)))
+cat("Summary: 
+    ")
+summary(Knn.Model.Average.RMSE)
+
+
 ```
 
-```{r}
-max(rmsedf$rmse1) - min(rmsedf$rmse1)
-```
+
+
 
