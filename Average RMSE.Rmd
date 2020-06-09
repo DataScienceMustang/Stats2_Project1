@@ -1,0 +1,90 @@
+---
+title: "Looping"
+author: "Adam Canton"
+date: "6/7/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(matrixStats)
+```
+
+```{r}
+# Set number of times you would like to repeat the sampling/testing - currently 500
+iterations = 1:500
+
+# the initial values for the columns (might not need these now that ive switched to building columns) 
+rmse1 = 0
+rmse2 = 0
+rmse3 = 0
+
+# Removes previous run so they dont stack
+rm(Model.Average.RMSE)
+
+for(i in iterations){
+  # Resets sample every iteration 
+  index<- sample(1:dim(Life14)[1],128,replace=F)
+  train<- Life14[index,]
+  test<- Life14[-index,]
+  
+  # the model runs -  feel free to change them up and see what comes out
+  modeltest1 <- lm(Life.expectancy ~ Adult.Mortality + SchoolFactor + LHIV.AIDS + percentage.expenditure + Total.expenditure + Linfant.deaths , data = train)
+  
+  modeltest2 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + percentage.expenditure + 
+                   Linfant.deaths + Status + LGDP + Diphtheria , data = train)
+  
+  modeltest3 <- lm(Life.expectancy ~ Adult.Mortality + , data = train)
+  
+  # predictors and column building
+  predictions1 <- modeltest1 %>% predict(test)
+  
+  d1 = data.frame(R2 = R2(predictions1,test$Life.expectancy),
+                  RMSE = RMSE(predictions1,test$Life.expectancy), MAE = MAE(predictions1, test$Life.expectancy))
+  rmse1 = c(rmse1,d1$RMSE)
+  
+  predictions2 <- modeltest2 %>% predict(test)
+
+  d2 = data.frame(R2 = R2(predictions2,test$Life.expectancy),
+                RMSE = RMSE(predictions2,test$Life.expectancy), MAE = MAE(predictions2, test$Life.expectancy))
+  rmse2 = c(rmse2, d2$RMSE)
+  
+  predictions3 <- modeltest3 %>% predict(test)
+
+  d3 = data.frame(R2 = R2(predictions3,test$Life.expectancy),
+                RMSE = RMSE(predictions3,test$Life.expectancy), MAE = MAE(predictions3, test$Life.expectancy))
+  rmse3 = c(rmse3, d3$RMSE)
+}
+# putting the dataframe together and outputting relevant statistics
+Model.Average.RMSE = cbind(rmse1, rmse2, rmse3)
+Model.Average.RMSE = Model.Average.RMSE[-1,]
+rmsedf = as.data.frame(Model.Average.RMSE)
+Means = colMeans(Model.Average.RMSE)
+SDs = colSds(Model.Average.RMSE)
+range1 = max(rmsedf$rmse1) - min(rmsedf$rmse1)
+range2 = max(rmsedf$rmse2) - min(rmsedf$rmse2)
+range3 = max(rmsedf$rmse3) - min(rmsedf$rmse3)
+
+# Looking at range of each model to determine how variant it is - can also look at stats above
+Means
+print("Standard Devs")
+SDs
+print("ranges - measure of variance between train/test shuffles")
+print(paste("Model 1 Range" , round(range1, 3)))
+print(paste("Model 2 Range" , round(range2, 3)))
+print(paste("Model 3 Range" , round(range3, 3)))
+cat("Summary: 
+    ")
+summary(Model.Average.RMSE)
+
+
+```
+
+```{r}
+class(Means)
+```
+
+```{r}
+max(rmsedf$rmse1) - min(rmsedf$rmse1)
+```
+
