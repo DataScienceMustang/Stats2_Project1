@@ -36,7 +36,7 @@ train<-Life14Scale[index,]
 test<-Life14Scale[-index,]
 
 knnvector1 = c(3,6,12,20)
-knnvector2 = c(3,6,13,20,26:30)
+knnvector2 = c(3,6,13,26:30)
 knnvector3 = c(3,6,13,20)
 #KNN3
 predknn3 <- knn.reg(train[,knnvector1], test[, knnvector1], train$Life.expectancy, k = 3)
@@ -67,7 +67,7 @@ names(Knn_Predictions_7)[1] <- "Predictions"
 
 trial <- data.frame(Predictions = c(Knn_Predictions_7), Actual = c(test$Life.expectancy))
 
-trial = trial3 %>% mutate(ResidualSq7 = (Predictions - Actual)^2)
+trial = trial %>% mutate(ResidualSq7 = (Predictions - Actual)^2)
 
 RMSEknn7 = sqrt(sum((trial$ResidualSq7)/nrow(test)))
 
@@ -79,7 +79,7 @@ RMSEknn7
 ```{r}
 # with all variables included it looks like the best chance I have is with k = 22. But that minimum is still far greater than the LM's. need to look at restricting variables. With 4 variables it looks like I can get it to sub 4 (~3.7).
 
-iterations = 500
+iterations = 50
 numks = 90
 masterRMSE = matrix(nrow = iterations, ncol = numks)
   
