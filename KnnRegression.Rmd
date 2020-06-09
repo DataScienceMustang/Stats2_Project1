@@ -1,0 +1,118 @@
+---
+title: "kNN Regression"
+author: "Adam Canton"
+date: "6/8/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(FNN)
+library(MASS)
+library(class)
+library(caret)
+library(e1071)
+library(magrittr)
+library(ggplot2)
+library(dplyr)
+library(httr)
+library(naniar)
+library(tidyr)
+library(plotly)
+library(forcats)
+library(ggExtra)
+library(glmnet)
+library(GGally)
+library(ggcorrplot)
+library(car)
+library(olsrr)
+library(leaps)
+```
+
+```{r}
+# Create train and test sets
+index<-sample(1:dim(Life14Scale)[1],128,replace=F)
+train<-Life14Scale[index,]
+test<-Life14Scale[-index,]
+
+knnvector1 = c(3,6,12,20)
+knnvector2 = c(3,6,13,20,26:30)
+knnvector3 = c(3,6,13,20)
+#KNN3
+predknn3 <- knn.reg(train[,knnvector1], test[, knnvector1], train$Life.expectancy, k = 3)
+Knn_Predictions_3 = as.data.frame(predknn3$pred)
+names(Knn_Predictions_3)[1] <- "Predictions"
+
+trial <- data.frame(Predictions = c(Knn_Predictions_3), Actual = c(test$Life.expectancy))
+
+trial = trial %>% mutate(ResidualSq3 = (Predictions - Actual)^2)
+
+RMSEknn3 = sqrt(sum((trial$ResidualSq3)/nrow(test)))
+
+#KNN5
+predknn5 <- knn.reg(train[,knnvector2], test[, knnvector2], train$Life.expectancy, k = 3)
+Knn_Predictions_5 = as.data.frame(predknn5$pred)
+names(Knn_Predictions_5)[1] <- "Predictions"
+
+trial <- data.frame(Predictions = c(Knn_Predictions_5), Actual = c(test$Life.expectancy))
+
+trial = trial %>% mutate(ResidualSq5 = (Predictions - Actual)^2)
+
+RMSEknn5 = sqrt(sum((trial$ResidualSq5)/nrow(test)))
+
+# KNN7
+predknn7 <- knn.reg(train[,knnvector3], test[, knnvector3], train$Life.expectancy, k = 3)
+Knn_Predictions_7 = as.data.frame(predknn7$pred)
+names(Knn_Predictions_7)[1] <- "Predictions"
+
+trial <- data.frame(Predictions = c(Knn_Predictions_7), Actual = c(test$Life.expectancy))
+
+trial = trial3 %>% mutate(ResidualSq7 = (Predictions - Actual)^2)
+
+RMSEknn7 = sqrt(sum((trial$ResidualSq7)/nrow(test)))
+
+RMSEknn3
+RMSEknn5
+RMSEknn7
+```
+
+```{r}
+# with all variables included it looks like the best chance I have is with k = 22. But that minimum is still far greater than the LM's. need to look at restricting variables. With 4 variables it looks like I can get it to sub 4 (~3.7).
+
+iterations = 500
+numks = 90
+masterRMSE = matrix(nrow = iterations, ncol = numks)
+  
+for(j in 1:iterations)
+{
+rmseknn = data.frame(rmse = numeric(90), k = numeric(90))
+index<-sample(1:dim(Life14)[1],128,replace=F)
+train<-Life14[index,]
+test<-Life14[-index,]
+for(i in 1:numks)
+{
+  predknn <- knn.reg(train[, knnvector1], test[, knnvector1], train$Life.expectancy, k = i)
+  Knn_Predictions = as.data.frame(predknn$pred)
+  names(Knn_Predictions)[1] <- "Predictions"
+
+  trial <- data.frame(Predictions = c(Knn_Predictions), Actual = c(test$Life.expectancy))
+
+  trial = trial %>% mutate(ResidualSq = (Predictions - Actual)^2)
+
+  RMSEknn = sqrt(sum((trial$ResidualSq)/nrow(test)))
+  masterRMSE[j,i] = RMSEknn
+}
+}
+MeanRMSE = colMeans(masterRMSE)
+plot(seq(1,numks,1),MeanRMSE, type = "l")
+```
+
+```{r}
+which.min(MeanRMSE)
+min(MeanRMSE)
+```
+
+
+
+
+
