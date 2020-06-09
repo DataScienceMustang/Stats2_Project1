@@ -198,26 +198,26 @@ Life14 = Life14 %>% mutate(LUnder5Deaths = log(under.five.deaths + 1))
 Life14 = Life14 %>% mutate(LThin19 = log(thinness..1.19.years + 1))
 Life14 = Life14 %>% mutate(LGDP = log(GDP))
 
-# Creating scaled variables for knn testing
-Life14Scale = Life14
-Life14Scale$Life.expectancy = scale(Life14Scale$Life.expectancy) 
-Life14Scale$Adult.Mortality = scale(Life14Scale$Life.expectancy)
-Life14Scale$percentage.expenditure = scale(Life14Scale$Life.expectancy)
-Life14Scale$Diphtheria = scale(Life14Scale$Life.expectancy)
-Life14Scale$Hepatitis.B = scale(Life14Scale$Life.expectancy)
-Life14Scale$Income.composition.of.resources = scale(Life14Scale$Life.expectancy)
-Life14Scale$Schooling = scale(Life14Scale$Life.expectancy)
-Life14Scale$LHIV.AIDS = scale(Life14Scale$Life.expectancy)
-Life14Scale$Linfant.deaths = scale(Life14Scale$Life.expectancy)
-Life14Scale$LUnder5Deaths = scale(Life14Scale$Life.expectancy)
-Life14Scale$LThin19 = scale(Life14Scale$Life.expectancy)
-Life14Scale$LGDP = scale(Life14Scale$Life.expectancy)
-Life14Scale$Total.expenditure = scale(Life14Scale$Total.expenditure)
-```
-```{r}
+
 # Drop Country and year from sets - drops 2 variables - finalize the set
 exclude_factors <- c("Country", "Year")
 Life14 <- Life14 %>% select( -all_of(exclude_factors))
+
+# Creating scaled variables for knn testing
+Life14Scale = Life14
+Life14Scale$Life.expectancy = scale(Life14Scale$Life.expectancy) 
+Life14Scale$Adult.Mortality = scale(Life14Scale$Adult.Mortality)
+Life14Scale$percentage.expenditure = scale(Life14Scale$percentage.expenditure)
+Life14Scale$Diphtheria = scale(Life14Scale$Diphtheria)
+Life14Scale$Hepatitis.B = scale(Life14Scale$Hepatitis.B)
+Life14Scale$Income.composition.of.resources = scale(Life14Scale$Income.composition.of.resources)
+Life14Scale$Schooling = scale(Life14Scale$Schooling)
+Life14Scale$LHIV.AIDS = scale(Life14Scale$LHIV.AIDS)
+Life14Scale$Linfant.deaths = scale(Life14Scale$Linfant.deaths)
+Life14Scale$LUnder5Deaths = scale(Life14Scale$LUnder5Deaths)
+Life14Scale$LThin19 = scale(Life14Scale$LThin19)
+Life14Scale$LGDP = scale(Life14Scale$LGDP)
+Life14Scale$Total.expenditure = scale(Life14Scale$Total.expenditure)
 ```
 
 
@@ -247,6 +247,7 @@ points(index,MallowCP[index],col="red",pch=10)
 ```
 
 ```{r}
+
 modelgenerator <- lm(Life.expectancy ~ . , data = train)
 ols_step_both_aic(modelgenerator)
 #ols_step_both_aic(model3)
