@@ -15,13 +15,11 @@ library(matrixStats)
 iterations = 1:500
 
 # the initial values for the columns (might not need these now that ive switched to building columns) 
-rmse1 = 0
-rmse2 = 0
-rmse3 = 0
+rmse1 = c()
+rmse2 = c()
+rmse3 = c()
 
-# Removes previous run so they dont stack
-rm(Model.Average.RMSE)
-
+# Start of Loop
 for(i in iterations){
   # Resets sample every iteration 
   index<- sample(1:dim(Life14)[1],128,replace=F)
@@ -54,10 +52,10 @@ for(i in iterations){
   d3 = data.frame(R2 = R2(predictions3,test$Life.expectancy),
                 RMSE = RMSE(predictions3,test$Life.expectancy), MAE = MAE(predictions3, test$Life.expectancy))
   rmse3 = c(rmse3, d3$RMSE)
+  # End for
 }
 # putting the dataframe together and outputting relevant statistics
 Model.Average.RMSE = cbind(rmse1, rmse2, rmse3)
-Model.Average.RMSE = Model.Average.RMSE[-1,]
 rmsedf = as.data.frame(Model.Average.RMSE)
 Means = colMeans(Model.Average.RMSE)
 SDs = round(colSds(Model.Average.RMSE), 3)
@@ -80,13 +78,13 @@ summary(Model.Average.RMSE)
 
 ```
 ```{r}
-# Set knn vectors - these are the column #s that will be analyzed
+# Set knn vectors - these are the column #s that will be analyzed 
 knnvector1 = c(3,6,12,20)
 knnvector2 = c(3,6,13,26:30)
 knnvector3 = c(3,6,13,20)
 
 # Start of Loop Variables
-iterations = 1:50
+iterations = 1:500
 i = 0
 knnrmse1 = c()
 knnrmse2 = c()
@@ -140,7 +138,6 @@ for(i in iterations){
 
 # putting the dataframe together and outputting relevant statistics
 Knn.Model.Average.RMSE = cbind(knnrmse1, knnrmse2, knnrmse3)
-Knn.Model.Average.RMSE = Knn.Model.Average.RMSE[-1,]
 knnrmsedf = as.data.frame(Knn.Model.Average.RMSE)
 Means = colMeans(Knn.Model.Average.RMSE)
 SDs = round(colSds(Knn.Model.Average.RMSE), 3)
