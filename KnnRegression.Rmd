@@ -77,21 +77,22 @@ RMSEknn7
 ```
 
 ```{r}
-# with all variables included it looks like the best chance I have is with k = 22. But that minimum is still far greater than the LM's. need to look at restricting variables. With 4 variables it looks like I can get it to sub 4 (~3.7).
+# Refuses to work with Life14Scale
 
 iterations = 50
-numks = 90
+numks = 50
 masterRMSE = matrix(nrow = iterations, ncol = numks)
-  
+
+
 for(j in 1:iterations)
 {
-rmseknn = data.frame(rmse = numeric(90), k = numeric(90))
-index<-sample(1:dim(Life14)[1],128,replace=F)
-train<-Life14[index,]
-test<-Life14[-index,]
-for(i in 1:numks)
+rmseknn = data.frame(rmse = numeric(50), k = numeric(50))
+index<-sample(1:dim(Life14Scale)[1],128,replace=F)
+train<-Life14Scale[index,]
+test<-Life14Scale[-index,]
+for(i in 3:numks)
 {
-  predknn <- knn.reg(train[, knnvector1], test[, knnvector1], train$Life.expectancy, k = i)
+  predknn <- knn.reg(train[,knnvector1], test[,knnvector1], train$Life.expectancy, k = i)
   Knn_Predictions = as.data.frame(predknn$pred)
   names(Knn_Predictions)[1] <- "Predictions"
 
@@ -103,16 +104,13 @@ for(i in 1:numks)
   masterRMSE[j,i] = RMSEknn
 }
 }
+masterRMSE = masterRMSE[,-(1:2)]
 MeanRMSE = colMeans(masterRMSE)
-plot(seq(1,numks,1),MeanRMSE, type = "l")
+plot(seq(3,numks,1),MeanRMSE, type = "l")
 ```
 
 ```{r}
 which.min(MeanRMSE)
 min(MeanRMSE)
 ```
-
-
-
-
 
