@@ -247,7 +247,6 @@ points(index,MallowCP[index],col="red",pch=10)
 ```
 
 ```{r}
-
 modelgenerator <- lm(Life.expectancy ~ . , data = train)
 ols_step_both_aic(modelgenerator)
 #ols_step_both_aic(model3)
