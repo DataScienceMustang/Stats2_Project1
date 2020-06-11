@@ -30,15 +30,17 @@ library(tree)
 library(ISLR)
 library(leaps)
 library(matrixStats)
+library(FNN)
+library(MASS)
 
 #Adam's Connections
-#life <- read.csv(file = "F:/R For Real/Stats2 Project 1/Life Expectancy Data.csv")
+life <- read.csv(file = "F:/R For Real/Stats2 Project 1/Life Expectancy Data.csv")
 
 #Anish's Connections
 #life <- read.csv("Life Expectancy Data.csv")
 
 #Grace's Connections
-life <-read.csv("C:/Users/david/OneDrive/Desktop/AppliedStats/6372_AppliedStats_GraceLang/Project1/LifeExpectancyData.csv")
+#life <-read.csv("C:/Users/david/OneDrive/Desktop/AppliedStats/6372_AppliedStats_GraceLang/Project1/LifeExpectancyData.csv")
 #life <-read.csv("C:/Users/Dave/Desktop/AppliedStats/Stats2_Project1/LifeExpectancyData.csv")
 
 
@@ -195,9 +197,11 @@ Life14$Schooling[174] = 8
 Life14$Schooling[175] = 16.3
 ```
 #What variables are still missing
-```{r replacing NAs with Mean}
+```{r}
 gg_miss_var(Life14)
+```
 
+```{r}
 #Can I add the avgs into the NAs without a lot of shift in data
 #Life14 %>% ggplot(aes(x = Income.composition.of.resources)) + geom_histogram() #normally distributed, low effect 2% change in mean
 #Life14 %>% ggplot(aes(x = Hepatitis.B)) + geom_histogram() #left-skewed, low effect 0% change in mean
@@ -234,7 +238,7 @@ GdpFactor = cut(Life14$GDP, breaks = c(0,40000,80000,120000), labels = c("Low","
 SchoolFactor = cut(Life14$Schooling, breaks = c(0,12,16,21), labels = c("Low","Moderate", "High"))
 
 # Binding them back to Life14
-Life14 = cbind(Life14, HepBfactor, PercentExpendFactor, PopulationFactor, GdpFactor, SchoolFactor)
+Life14 = cbind(Life14, HepBfactor, PercentExpendFactor, PopulationFactor, GdpFactor, SchoolFactor, IncomeCompFactor)
 
 #Fixing some errors where for some reason it wasn't picking up these 3
 Life14$PercentExpendFactor[45] = as.factor("Low")
@@ -248,7 +252,11 @@ Life14 = Life14 %>% mutate(LUnder5Deaths = log(under.five.deaths + 1))
 Life14 = Life14 %>% mutate(LThin19 = log(thinness..1.19.years + 1))
 Life14 = Life14 %>% mutate(LGDP = log(GDP))
 
-# Creating scaled variables for knn testing
+# It would be helpful if we drop Country and Year here -  is there a reason we cant? It looks like everything below this has some lines dedicated to taking out country and year, could save ourselves some room?
+
+# If we cant take it out here - I'll move my scale variables to be created later, I cant have any non-numerics for knn.reg and right now Life14 is passing Country and Year
+
+#Creating scaled variables for knn testing
 Life14Scale = Life14
 Life14Scale$Life.expectancy = scale(Life14Scale$Life.expectancy) 
 Life14Scale$Adult.Mortality = scale(Life14Scale$Adult.Mortality)
@@ -276,14 +284,15 @@ Life14 %>% ggplot(aes(y = Life.expectancy)) + geom_boxplot() + facet_wrap(~Statu
 
 Pairwise plots for selected variables:
 ```{r message = FALSE, warning = FALSE}
-df2 <- select(Life14, c(Life.expectancy, Adult.Mortality, Total.expenditure, HIV.AIDS, Income.composition.of.resources, Schooling))
+df2 <- dplyr::select(Life14, c(Life.expectancy, Adult.Mortality, Total.expenditure, HIV.AIDS, Income.composition.of.resources, Schooling))
 library(GGally)
 ggpairs(df2)
 ```
 
 Correlation between life expectancy and all the numeric independent variables:
 ```{r}
-cor.xy <- cor(Life14 %>% select(-c(Country, Year, Status)), use = "complete.obs")
+# Error in Cor.xy
+cor.xy <- cor(Life14 %>% dplyr::select(-c(Country, Year, Status)), use = "complete.obs")
 LE.cor <- data.frame(var = rownames(cor.xy)[-1], correlation = cor.xy[-1, 1])
 LE.cor %>% ggplot(aes(x = var, y = correlation)) + geom_col() + coord_flip()
 ```
@@ -291,8 +300,8 @@ LE.cor %>% ggplot(aes(x = var, y = correlation)) + geom_col() + coord_flip()
 
 # Checking Correlations between original variables and their logged counterparts as well as the response - we may only achieve some minor inprovements in GDP and HIV.AIDS but under 5 deaths and infant deaths have changed significantly. Also HIV.AIDS and infant deaths without the log are oddly related
 ```{r}
-corr <- Life14 %>% 
-  select(Life.expectancy, LHIV.AIDS, Linfant.deaths, LUnder5Deaths, LThin19, LGDP, GDP, infant.deaths, HIV.AIDS, under.five.deaths, thinness..1.19.years) 
+corr <- Life14 %>% dplyr::select(Life.expectancy, LHIV.AIDS, Linfant.deaths, LUnder5Deaths,
+                          LThin19, LGDP, GDP, infant.deaths, HIV.AIDS, under.five.deaths, thinness..1.19.years) 
 
 corr <- round(cor(corr), 2)
 
@@ -306,11 +315,11 @@ ggcorrplot(corr, hc.order = TRUE, type = "lower",
 
 # Looking at Correlations for the rest of the predictors
 ```{r}
-exclude_factors <- c( "Status", "thinness..1.19.years", "under.five.deaths", "IncomeCompFactor",
+exclude_factors <- c( "Country", "Year", "Status", "thinness..1.19.years", "under.five.deaths", "IncomeCompFactor",
                      "HepBfactor", "PercentExpendFactor", "SchoolFactor", "GdpFactor", "PopulationFactor",
                      "LHIV.AIDS", "Linfant.deaths", "LUnder5Deaths", "LThin19", "LGDP")
 
-corr <- Life14 %>% select( -all_of(exclude_factors))
+corr <- Life14 %>% dplyr::select(-all_of(exclude_factors))
 
 corr <- round(cor(corr), 2)
 
@@ -320,6 +329,13 @@ ggcorrplot(corr, hc.order = TRUE, type = "lower",
            title = "Correlations of all relevant variables",
            ggtheme = theme_bw())
 ```
+
+Get rid of Country Name and Year
+```{r}
+exclude_factors <- c("Country", "Year")
+Life14 <- Life14 %>% dplyr::select( -all_of(exclude_factors))
+```
+
 
 ```{r}
 # Set training and Testing Sets
@@ -340,6 +356,7 @@ adjr2<-summary(reg.fwd)$adjr2
 plot(1:21,adjr2,type="l",ylab="Adjusted R-squared",xlab="# of predictors")
 index<-which(adjr2==max(adjr2))
 points(index,adjr2[index],col="red",pch=10)
+
 
 MallowCP <- summary(reg.fwd)$cp
 plot(1:21,MallowCP,type="l",ylab="Mallow's CP",xlab="# of predictors")
@@ -380,7 +397,6 @@ while playing with some models I found an advantageous result when using Schoolf
 modeltest2 <-  lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths + 
                    scale(percentage.expenditure) + SchoolFactor:scale(percentage.expenditure) + Total.expenditure + BMI + LThin19, data = train)
 summary(modeltest2)
-vif(modeltest2)
 ols_plot_resid_fit(modeltest2)
 ols_plot_resid_lev(modeltest2)
 ols_plot_resid_qq(modeltest2)
@@ -416,8 +432,8 @@ d1 = data.frame(R2 = R2(predictions1,test$Life.expectancy),RMSE = RMSE(predictio
 predictions2 <- modeltest2 %>% predict(test)
 d2 = data.frame(R2 = R2(predictions2,test$Life.expectancy),RMSE = RMSE(predictions2,test$Life.expectancy), MAE = MAE(predictions2, test$Life.expectancy))
 
-predictions3 <- modeltest3 %>% predict(test)
-d3 = data.frame(R2 = R2(predictions3,test$Life.expectancy),RMSE = RMSE(predictions3,test$Life.expectancy), MAE = MAE(predictions3, test$Life.expectancy))
+predictions3 <- modeltest3 %>% predict(testS)
+d3 = data.frame(R2 = R2(predictions3,testS$Life.expectancy),RMSE = RMSE(predictions3,testS$Life.expectancy), MAE = MAE(predictions3, testS$Life.expectancy))
 
 # Need to remark these values
 #data.frame(RMSE = c(d1$RMSE, d2$RMSE, d3$RMSE), Model = c("1", "2", "3"))
@@ -426,8 +442,8 @@ Pred1 <- data.frame(Value = predictions1, Model = "1")
 Pred2 <- data.frame(Value = predictions2, Model = "2")
 Pred3 <- data.frame(Value = predictions3, Model = "3")
 PredActual <- data.frame(ActualValue = test$Life.expectancy)
-PredAll <- rbind(Pred1, Pred2, Pred3)
-PredActual <- rbind(PredActual,PredActual,PredActual)
+PredAll <- rbind(Pred1, Pred2)
+PredActual <- rbind(PredActual,PredActual)
 PredAll <- cbind(PredAll, PredActual)
 
 #Final Plot
@@ -437,7 +453,7 @@ PredAll %>% ggplot(aes(x = Value, y = ActualValue, fill = Model)) + geom_point(a
 #Barchart of results
 PredAll  %>% mutate(difference = (Value - ActualValue)) %>% group_by(Model) %>% 
   summarise(RMSE = sqrt(sum(difference^2)/nrow(test))) %>%
-  ggplot(aes(x = reorder(Model,RMSE), y = RMSE)) + geom_col(aes(fill = Model)) + 
+  ggplot(aes(x = reorder(Model,-RMSE), y = RMSE)) + geom_col(aes(fill = Model)) + 
   geom_text(aes(label = round(RMSE, 4), vjust = -0.5)) + xlab("Model #") + ylab("RMSE on Test Set") + ggtitle("Model RMSE's 70/30 Cross Validation")
 ```
 
@@ -513,6 +529,25 @@ cat("Summary:
 summary(Model.Average.RMSE)
 ```
 
+```{r}
+# Creating scaled variables for knn testing
+Life14Scale = Life14
+Life14Scale$Life.expectancy = scale(Life14Scale$Life.expectancy) 
+Life14Scale$Adult.Mortality = scale(Life14Scale$Adult.Mortality)
+Life14Scale$percentage.expenditure = scale(Life14Scale$percentage.expenditure)
+Life14Scale$Diphtheria = scale(Life14Scale$Diphtheria)
+Life14Scale$Hepatitis.B = scale(Life14Scale$Hepatitis.B)
+Life14Scale$Income.composition.of.resources = scale(Life14Scale$Income.composition.of.resources)
+Life14Scale$Schooling = scale(Life14Scale$Schooling)
+Life14Scale$LHIV.AIDS = scale(Life14Scale$LHIV.AIDS)
+Life14Scale$Linfant.deaths = scale(Life14Scale$Linfant.deaths)
+Life14Scale$LUnder5Deaths = scale(Life14Scale$LUnder5Deaths)
+Life14Scale$LThin19 = scale(Life14Scale$LThin19)
+Life14Scale$LGDP = scale(Life14Scale$LGDP)
+Life14Scale$Total.expenditure = scale(Life14Scale$Total.expenditure)
+```
+
+
 Knn Model benchmarking
 ```{r}
 # Set knn vectors - these are the column #s that will be analyzed 
@@ -560,7 +595,7 @@ for(i in iterations){
   knnrmse2 = c(knnrmse2, RMSEknn2)
 
   # KNN3
-  predknn3 <- knn.reg(train[,knnvector3], test[, knnvector3], train$Life.expectancy, k = 3)
+  predknn3 <- knn.reg(train[,knnvector3], test[, knnvector3], train$Life.expectancy, k = 4)
   Knn_Predictions_3 = as.data.frame(predknn3$pred)
   names(Knn_Predictions_3)[1] <- "Predictions"
 
@@ -596,7 +631,7 @@ summary(Knn.Model.Average.RMSE)
 ```
 
 
-# Looks for optinal K value between 1-50. Just change the knnvector to run different models.
+# Looks for optimal K value between 1-50. Just change the knnvector to run different models.
 ```{r}
 iterations = 50
 numks = 50
