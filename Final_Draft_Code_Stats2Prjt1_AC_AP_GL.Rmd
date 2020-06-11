@@ -292,7 +292,7 @@ ggpairs(df2)
 
 Correlation between life expectancy and all the numeric independent variables:
 ```{r}
-# Error in Cor.xy
+# Error in Cor.xy - x must be numeric
 cor.xy <- cor(Life14 %>% dplyr::select(-c(Country, Year, Status)), use = "complete.obs")
 LE.cor <- data.frame(var = rownames(cor.xy)[-1], correlation = cor.xy[-1, 1])
 LE.cor %>% ggplot(aes(x = var, y = correlation)) + geom_col() + coord_flip()
@@ -381,7 +381,7 @@ ols_step_both_aic(modelgenerator)
 
 # Gut Model - EDA first - human variable selection - Some tech use to look at optimum number of predictors
 ```{r}
-modeltest1 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths, data = train)
+modeltest1 <- lm(Life.expectancy ~ Income.composition.of.resources + SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths, data = train)
 summary(modeltest1)
 vif(modeltest1)
 ols_plot_resid_fit(modeltest1)
@@ -525,18 +525,18 @@ SDs
 print("ranges - measure of variance between train/test shuffles")
 print(paste("Model 1 Range" , round(range1, 3)))
 print(paste("Model 2 Range" , round(range2, 3)))
-print(paste("Model 3 Range" , round(range3, 3)))
+#print(paste("Model 3 Range" , round(range3, 3)))
 cat("Summary: 
     ")
 summary(Model.Average.RMSE)
-```
-```{r}
+
+
+# Column
 rmsedf1 %>% group_by(variable) %>% summarise(mean = (mean(value))) %>% 
   ggplot(aes(x = reorder(variable, -mean), y = mean, fill = variable)) + geom_col(width = 0.75) + geom_text(aes(label = round(mean,3), vjust = -0.5)) + 
   ggtitle("Average RMSE over 100 Shuffles (Linear Models)") + xlab("Model #") + ylab("Mean RMSE")
-```
 
-```{r}
+# Boxplot
 rmsedf1 %>% ggplot(aes(x = variable, y = value)) + geom_boxplot()
 
 # Here we can see there is no significant difference between the models in terms of RMSE
@@ -643,15 +643,14 @@ print(paste("Model 3 Range" , round(knnrange3, 3)))
 cat("Summary: 
     ")
 summary(Knn.Model.Average.RMSE)
-```
 
-```{r}
+
+
 knnrmsedf1 %>% group_by(variable) %>% summarise(mean = (mean(value))) %>% 
   ggplot(aes(x = reorder(variable, -mean), y = mean, fill = variable)) + geom_col(width = 0.75) + geom_text(aes(label = round(mean,3), vjust = -0.5)) + 
   ggtitle("Average RMSE over 100 Shuffles (KNN)") + xlab("Model #") + ylab("Mean RMSE")
-```
 
-```{r}
+
 # Here we can see that knnvector2 is significantly different that knnvector1 and knnvector3. 1 and 3 are not significantly different
 # Dont forget multiple comparison adjustment
 knnrmsedf1 %>% ggplot(aes(x = variable, y = value)) + geom_boxplot()
