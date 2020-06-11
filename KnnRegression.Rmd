@@ -92,7 +92,7 @@ train<-Life14Scale[index,]
 test<-Life14Scale[-index,]
 for(i in 3:numks)
 {
-  predknn <- knn.reg(train[,knnvector1], test[,knnvector1], train$Life.expectancy, k = i)
+  predknn <- knn.reg(train[,knnvector3], test[,knnvector3], train$Life.expectancy, k = i)
   Knn_Predictions = as.data.frame(predknn$pred)
   names(Knn_Predictions)[1] <- "Predictions"
 
