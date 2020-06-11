@@ -119,7 +119,7 @@ Life14$Population[121] = 4027000
 Life14$Population[149] = 13420000
 Life14$Population[42] = 11310000
 
-# Fixing 27 - 0 Percent Expenditures - Likely going to turn this variable into a categorical with 3-5 levels depending on spread
+# Fixing 27 - 0 Percent Expenditures - 
 Life14$percentage.expenditure[11] = 748.36
 Life14$percentage.expenditure[20] = 115.35
 Life14$percentage.expenditure[28] = 16.85
@@ -184,7 +184,7 @@ GdpFactor = cut(Life14$GDP, breaks = c(0,40000,80000,120000), labels = c("Low","
 SchoolFactor = cut(Life14$Schooling, breaks = c(0,12,16,21), labels = c("Low","Moderate", "High"))
 
 # Binding them back to Life14
-Life14 = cbind(Life14, HepBfactor, PercentExpendFactor, PopulationFactor, GdpFactor, SchoolFactor)
+Life14 = cbind(Life14,IncomeCompFactor, HepBfactor, PercentExpendFactor, PopulationFactor, GdpFactor, SchoolFactor)
 
 #Fixing some errors where for some reason it wasn't picking up these 3
 Life14$PercentExpendFactor[45] = as.factor("Low")
@@ -223,15 +223,17 @@ Life14Scale$Total.expenditure = scale(Life14Scale$Total.expenditure)
 
 ```{r}
 # Set training and testing Sets currently set to 70/30 128/55
-#set.seed(1234)
+set.seed(1234)
 index<-sample(1:dim(Life14)[1],128,replace=F)
 train<-Life14[index,]
 test<-Life14[-index,]
+```
 
-reg.fwd=regsubsets(Life.expectancy~.,data=trainfull,method="forward",nvmax=20)
+```{r}
+reg.fwd=regsubsets(Life.expectancy~.,data=train,method="forward",nvmax=20)
 
 bics<-summary(reg.fwd)$bic
-plot(1:20,bics,type="l",ylab="BIC",xlab="# of predictors")
+plot(1:21,bics,type="l",ylab="BIC",xlab="# of predictors")
 index<-which(bics==min(bics))
 points(index,bics[index],col="red",pch=10)
 
@@ -247,61 +249,43 @@ points(index,MallowCP[index],col="red",pch=10)
 ```
 
 ```{r}
+# Used to quickly cycle though models while shuffling train/test sets
+index<-sample(1:dim(Life14)[1],128,replace=F)
+train<-Life14[index,]
+test<-Life14[-index,]
+
 modelgenerator <- lm(Life.expectancy ~ . , data = train)
 ols_step_both_aic(modelgenerator)
-#ols_step_both_aic(model3)
+
 ```
 
-```{r}
-# 
-modeltest1 <- lm(Life.expectancy ~ Adult.Mortality + SchoolFactor + LHIV.AIDS + percentage.expenditure + Total.expenditure + Linfant.deaths , data = train)
-#summary(modeltest1)
-#vif(modeltest1)
-#ols_plot_resid_fit(modeltest1)
-#ols_plot_resid_lev(modeltest1)
-#ols_plot_resid_qq(modeltest1)
-#ols_plot_resid_hist(modeltest1)
-#ols_plot_cooksd_bar(modeltest1)
-#ols_step_both_aic(model4)
-```
+
 
 ```{r}
-# 
-modeltest2 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + percentage.expenditure + 
-                   Linfant.deaths + Status + LGDP + Diphtheria , data = train)
-#summary(modeltest2)
-#vif(modeltest2)
-#ols_plot_resid_fit(modeltest2)
-#ols_plot_resid_lev(modeltest2)
-#ols_plot_resid_qq(modeltest2)
-#ols_plot_resid_hist(modeltest2)
-#ols_plot_cooksd_bar(modeltest2)
+# complex model - interactions - higher order terms - autoselection methods
+modeltest2 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths + 
+                   percentage.expenditure + Total.expenditure + BMI + LThin19, data = train)
+summary(modeltest2)
+vif(modeltest2)
+ols_plot_resid_fit(modeltest2)
+ols_plot_resid_lev(modeltest2)
+ols_plot_resid_qq(modeltest2)
+ols_plot_resid_hist(modeltest2)
+ols_plot_cooksd_bar(modeltest2)
 ```
 
 
 
 ```{r}
 # RSE - 2.288
-modeltest4 <- lm(Life.expectancy ~ 
-                    Income.composition.of.resources:Schooling + Population + Measles + Hepatitis.B + Diphtheria + Polio + Total.expenditure + infant.deaths +
-                    under.five.deaths + log(HIV.AIDS)	+ BMI	+ thinness.5.9.years + thinness..1.19.years +	Alcohol +	percentage.expenditure +	GDP +	Status +
-                    Adult.Mortality	+ Income.composition.of.resources +	HIV.AIDS:Income.composition.of.resources + Schooling +
-                    percentage.expenditure:Income.composition.of.resources +	thinness..1.19.years:thinness.5.9.years +	HIV.AIDS:GDP +Hepatitis.B:Diphtheria +
-                    BMI:Schooling	+ Total.expenditure:GDP +	Adult.Mortality:Total.expenditure +	HIV.AIDS:Schooling +	under.five.deaths:thinness..1.19.years +
-                    Population:thinness..1.19.years +	Adult.Mortality:Polio +	Status:Total.expenditure +	Status:GDP + percentage.expenditure:Population +
-                    Alcohol:thinness.5.9.years +	infant.deaths:Population +	Alcohol:HIV.AIDS +	HIV.AIDS:Population +	BMI:under.five.deaths +
-                    Total.expenditure:thinness.5.9.years +	Total.expenditure:HIV.AIDS +	percentage.expenditure:HIV.AIDS +
-                    Diphtheria:Income.composition.of.resources +	Measles:HIV.AIDS +	Measles:Schooling +	Status:Schooling + Status:Measles +
-                    Status:Income.composition.of.resources +	Status:thinness.5.9.years	+ Status:Hepatitis.B +	percentage.expenditure:GDP +
-                    percentage.expenditure:Schooling +	GDP:Schooling +	Status:percentage.expenditure +	percentage.expenditure:Polio +	
-                    Polio:Total.expenditure	 + Status:Polio +	Measles:thinness..1.19.years	+ Population:thinness.5.9.years +	Polio:Diphtheria,
-                    data = trainfull)
-summary(modeltest4)
-vif(modeltest4)
-ols_plot_resid_fit(modeltest4)
-ols_plot_resid_lev(modeltest4)
-ols_plot_resid_qq(modeltest4)
-ols_plot_resid_hist(modeltest4)
+modeltest2 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths + 
+                   scale(percentage.expenditure) + SchoolFactor:scale(percentage.expenditure) + Total.expenditure + BMI + LThin19, data = train)
+summary(modeltest2)
+vif(modeltest2)
+ols_plot_resid_fit(modeltest2)
+ols_plot_resid_lev(modeltest2)
+ols_plot_resid_qq(modeltest2)
+ols_plot_resid_hist(modeltest2)
 ```
 
 ```{r}
@@ -347,17 +331,6 @@ PredAll  %>% mutate(difference = (Value - ActualValue)) %>% group_by(Model) %>%
 ```
 
 
-
-
-
-
-```{r}
-gc()
-```
-
-```{r}
-data.frame(R2 = R2(predictions1,testfull$Life.expectancy),RMSE = RMSE(predictions1,testfull$Life.expectancy), MAE = MAE(predictions1, testfull$Life.expectancy))
-```
 
 
 
