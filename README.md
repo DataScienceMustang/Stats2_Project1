@@ -29,18 +29,19 @@ _Meetings:_
 * Go through Final Code - draft and see which visualizations to keep in/remove
 * Talk about Anish's approach of removing correlated variables before running the model, he gets different coefficients based on this method (His include Adult Mortality, total expenditure, HIV, Income composition) vs (Schooling, Adult.mortality, HIV, GDP, thinness 5-9, Diphtheria, Alcohol) -- His might have a easier interpretation = then we could use full data set (no removals for the 2nd model within Q1)
 * Master data set the sane as each of ours
-* Adam - KNN & figure out final model, interactions
+* ~Adam - KNN & figure out final model, interactions~
 * Anish - KNN/Nonparameter
 * Grace - comparison of Adam/Anish's lm shared doc work on aggregation & regression tree analysis/interpretation
    **Go back and see if there are any highlights we can call out as trends between life exp and some of the parameters that are used in the model.
 
 ## Model selection 6/10 meeting: 
-* Custom model based on gut 
-* Forward/Stepwise/Backward - Stepwise winner
+* ~Custom model based on gut~
+* ~Forward/Stepwise/Backward - Stepwise winner~
 * Regression Tree
-* KNN
+* ~KNN~
+* add graphics for the results of the loops 
 
-**Update the loop within the Avg RMSE to have the 3 model fits
+**~Update the loop within the Avg RMSE to have the 3 model fits~
 
 ## Notes from 6/10 Class: 
 Q1 discuss the residuals, how we dealt with NAs, correlation, multicolinearity
