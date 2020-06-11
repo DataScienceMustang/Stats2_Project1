@@ -151,7 +151,7 @@ Life14$Population[121] = 4027000
 Life14$Population[149] = 13420000
 Life14$Population[42] = 11310000
 ```
-# Fixing 27 - 0 Percent Expenditures - Likely going to turn this variable into a categorical with 3-5 levels depending on spread
+# Fixing 27 - 0 Percent Expenditures
 ```{r}
 Life14$percentage.expenditure[11] = 748.36
 Life14$percentage.expenditure[20] = 115.35
@@ -181,7 +181,7 @@ Life14$percentage.expenditure[179] = 235.35
 Life14$percentage.expenditure[180] = 48.82
 Life14$percentage.expenditure[181] = 12.9
 ```
-# Fixing the 10 missing school variables - well except somalia (setting to 0) - might considering leaving somlia out it has almost no data
+# Fixing the 10 missing school variables 
 ```{r}
 Life14$Schooling[28] = 5.2
 Life14$Schooling[44] = 12.7
@@ -288,51 +288,11 @@ LE.cor <- data.frame(var = rownames(cor.xy)[-1], correlation = cor.xy[-1, 1])
 LE.cor %>% ggplot(aes(x = var, y = correlation)) + geom_col() + coord_flip()
 ```
 
-# Checking correlations between variables that are missing data and variables I think may make good substitutes and are not missing data.
-It seems that Schooling is a good replacement for income.comp though it seems as though income.comp has a slightly better relationship with life expectancy
-I think Im going to go with Schooling as the more complete variable
-Diphtheria and HepB also seem like good substitutes and diptheria is the more highly correlated with life expectancy going to throw out income.comp, and HepB, along with year, country, status to check correlations in next chunk.
+
+# Checking Correlations between original variables and their logged counterparts as well as the response - we may only achieve some minor inprovements in GDP and HIV.AIDS but under 5 deaths and infant deaths have changed significantly. Also HIV.AIDS and infant deaths without the log are oddly related
 ```{r}
 corr <- Life14 %>% 
-  select("Income.composition.of.resources", "Hepatitis.B", "Diphtheria", "Schooling", "Measles", "Life.expectancy", "GDP", "Polio") %>%
-  drop_na()
-
-corr <- round(cor(corr), 2)
-
-ggcorrplot(corr, hc.order = TRUE, type = "lower",
-           lab = TRUE, lab_size = 3, method = "circle",
-           colors = c("tomato2", "white", "springgreen3"),
-           title = "Correlations of all relevant variables",
-           ggtheme = theme_bw())
-```
-# Excluded factors here have been selected to due high (>0.9) correlations or are not numeric in nature (Status...)
-The results here show that we can likely get rid of: a thinness category, either infant deaths or deaths under 5, and gdp or percent.expenditure
-```{r}
-# http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html#Correlogram
-
-exclude_factors <- c("Country", "Status", "Year", "Hepatitis.B", "Income.composition.of.resources")
-
-corr <- Life14 %>% select( -all_of(exclude_factors)) %>% drop_na()
-
-corr <- round(cor(corr), 2)
-
-ggcorrplot(corr, hc.order = TRUE, type = "lower",
-           lab = TRUE, lab_size = 3, method = "circle",
-           colors = c("tomato2", "white", "springgreen3"),
-           title = "Correlations of all relevant variables",
-           ggtheme = theme_bw())
-```
-
-```{r}
-# The variables I threw out are the ones that were missing data or least correlated with life expectancy - 
-# Though admittedly sometimes the difference was small
-# Throw out - infant deaths, thinness 1-19, and percent expenditure
-# no more significant correlations between explanatory variables - time to look at selection
-
-exclude_factors <- c("Country", "Status", "Year", "Hepatitis.B", 
-                     "Income.composition.of.resources", "infant.deaths", "thinness..1.19.years", "percentage.expenditure")
-
-corr <- Life14 %>% select( -all_of(exclude_factors)) %>% drop_na()
+  select(Life.expectancy, LHIV.AIDS, Linfant.deaths, LUnder5Deaths, LThin19, LGDP, GDP, infant.deaths, HIV.AIDS, under.five.deaths, thinness..1.19.years) 
 
 corr <- round(cor(corr), 2)
 
@@ -344,121 +304,109 @@ ggcorrplot(corr, hc.order = TRUE, type = "lower",
 ```
 
 
+# Looking at Correlations for the rest of the predictors
 ```{r}
-# Drop Country and year from sets - drops 2 variables - finalize the set
-exclude_factors <- c("Country", "Year")
-Life14 <- Life14 %>% select( -all_of(exclude_factors))
+exclude_factors <- c( "Status", "thinness..1.19.years", "under.five.deaths", "IncomeCompFactor",
+                     "HepBfactor", "PercentExpendFactor", "SchoolFactor", "GdpFactor", "PopulationFactor",
+                     "LHIV.AIDS", "Linfant.deaths", "LUnder5Deaths", "LThin19", "LGDP")
 
+corr <- Life14 %>% select( -all_of(exclude_factors))
+
+corr <- round(cor(corr), 2)
+
+ggcorrplot(corr, hc.order = TRUE, type = "lower",
+           lab = TRUE, lab_size = 3, method = "circle",
+           colors = c("tomato2", "white", "springgreen3"),
+           title = "Correlations of all relevant variables",
+           ggtheme = theme_bw())
+```
+
+```{r}
 # Set training and Testing Sets
 set.seed(1234)
 index<-sample(1:dim(Life14)[1],90,replace=F)
 train<-Life14[index,]
 test<-Life14[-index,]
-```
 
-```{r}
-# Forward Selection - BIC Suggests 5 predictors - Mallow CP suggests 5 
+# Forward Selection 
 reg.fwd=regsubsets(Life.expectancy~.,data=train,method="forward",nvmax=20)
 bics<-summary(reg.fwd)$bic
 plot(1:21,bics,type="l",ylab="BIC",xlab="# of predictors")
 index<-which(bics==min(bics))
 points(index,bics[index],col="red",pch=10)
-```
 
-```{r}
-# Adjr2 suggests up to 9
+# Adjr2
 adjr2<-summary(reg.fwd)$adjr2
 plot(1:21,adjr2,type="l",ylab="Adjusted R-squared",xlab="# of predictors")
 index<-which(adjr2==max(adjr2))
 points(index,adjr2[index],col="red",pch=10)
-```
 
-```{r}
 MallowCP <- summary(reg.fwd)$cp
 plot(1:21,MallowCP,type="l",ylab="Mallow's CP",xlab="# of predictors")
 index<-which(MallowCP==min(MallowCP))
 points(index,MallowCP[index],col="red",pch=10)
 ```
 
-# Looking at all the parameters significance
+
+
+# Used to quickly cycle though models while shuffling train/test sets
+Ols step both does forward and backward selection at each step in this case based on model AIC
 ```{r}
+index<-sample(1:dim(Life14)[1],128,replace=F)
+train<-Life14[index,]
+test<-Life14[-index,]
+
 modelgenerator <- lm(Life.expectancy ~ . , data = train)
 ols_step_both_aic(modelgenerator)
-#ols_step_both_aic(model3)
 ```
 
+
+# Gut Model - EDA first - human variable selection - Some tech use to look at optimum number of predictors
 ```{r}
-# Looking for a good model using Olsrr going to start with stepwise - using p-values as target values
-model1 <- lm(Life.expectancy ~ ., data = Life14)
-ols_step_both_p(model1)
-vif(model1)
+modeltest1 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths, data = train)
+summary(modeltest1)
+vif(modeltest1)
+ols_plot_resid_fit(modeltest1)
+ols_plot_resid_lev(modeltest1)
+ols_plot_resid_qq(modeltest1)
+ols_plot_resid_hist(modeltest1)
+ols_plot_cooksd_bar(modeltest1)
 ```
 
+
+# complex model - interactions - higher order terms - autoselection methods - through many iterations I found no indication significant interactions, however 
+while playing with some models I found an advantageous result when using Schoolfactor:scale(percentage.expeniture). The interaction is not significant but provides a slight edge in prediction (< 2% for most runs)
 ```{r}
-model1 <- lm(Life.expectancy ~ Schooling + Adult.Mortality + HIV.AIDS + GDP + thinness.5.9.years + Diphtheria + Alcohol, data = Life14)
-summary(model1)
-vif(model1)
+modeltest2 <-  lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths + 
+                   scale(percentage.expenditure) + SchoolFactor:scale(percentage.expenditure) + Total.expenditure + BMI + LThin19, data = train)
+summary(modeltest2)
+vif(modeltest2)
+ols_plot_resid_fit(modeltest2)
+ols_plot_resid_lev(modeltest2)
+ols_plot_resid_qq(modeltest2)
+ols_plot_resid_hist(modeltest2)
+ols_plot_cooksd_bar(modeltest2)
 ```
 
-
+This model is here to run against the knn for comparison. It uses the same scaled variables as the knnvector3
 ```{r}
-# Checking fit of model 1 - we actually look really good here. We have 2 points that may be problematic #28 Ivory Coast and #143 Seychelle 
-# unsure of why this is nothing really stand out about them.
-ols_plot_resid_lev(model1)
-# nice looking random cloud
-ols_plot_resid_fit(model1)
-# Here we see the low end looks a bit un-normal but overall is largely normal
-ols_plot_resid_qq(model1)
-# as we saw in the QQ plot above there is some left skew here but largely looks normal
-ols_plot_resid_hist(model1)
+#Create train and test sets for scaled linear models
+indexS<-sample(1:dim(Life14Scale)[1],128,replace=F)
+trainS<-Life14Scale[indexS,]
+testS<-Life14Scale[-indexS,]
+  
+modeltest3 <- lm(Life.expectancy ~ Adult.Mortality +  percentage.expenditure + Diphtheria + Schooling, data = trainS)
+
+summary(modeltest3)
+vif(modeltest3)
+ols_plot_resid_fit(modeltest3)
+ols_plot_resid_lev(modeltest3)
+ols_plot_resid_qq(modeltest3)
+ols_plot_resid_hist(modeltest3)
+ols_plot_cooksd_bar(modeltest3)
 ```
 
-#Generating 3 models to cross compare smooth & fit
-```{r}
-### MODEL 1 ###
-modeltest1 <- lm(Life.expectancy ~ Adult.Mortality + SchoolFactor + LHIV.AIDS + percentage.expenditure + Total.expenditure + Linfant.deaths , data = train)
-#summary(modeltest1)
-#vif(modeltest1)
-#ols_plot_resid_fit(modeltest1)
-#ols_plot_resid_lev(modeltest1)
-#ols_plot_resid_qq(modeltest1)
-#ols_plot_resid_hist(modeltest1)
-#ols_plot_cooksd_bar(modeltest1)
-#ols_step_both_aic(model4)
 
-### MODEL 2 ###
-modeltest2 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + percentage.expenditure + 
-                   Linfant.deaths + Status + LGDP + Diphtheria , data = train)
-#summary(modeltest2)
-#vif(modeltest2)
-#ols_plot_resid_fit(modeltest2)
-#ols_plot_resid_lev(modeltest2)
-#ols_plot_resid_qq(modeltest2)
-#ols_plot_resid_hist(modeltest2)
-#ols_plot_cooksd_bar(modeltest2)
-
-### MODEL 3  - ALL IN WITH INTERACTIONS ###
-modeltest3 <- lm(Life.expectancy ~ 
-                    Income.composition.of.resources:Schooling + Population + Measles + Hepatitis.B + Diphtheria + Polio + Total.expenditure + infant.deaths +
-                    under.five.deaths + log(HIV.AIDS)	+ BMI	+ thinness.5.9.years + thinness..1.19.years +	Alcohol +	percentage.expenditure +	GDP +	Status +
-                    Adult.Mortality	+ Income.composition.of.resources +	HIV.AIDS:Income.composition.of.resources + Schooling +
-                    percentage.expenditure:Income.composition.of.resources +	thinness..1.19.years:thinness.5.9.years +	HIV.AIDS:GDP +Hepatitis.B:Diphtheria +
-                    BMI:Schooling	+ Total.expenditure:GDP +	Adult.Mortality:Total.expenditure +	HIV.AIDS:Schooling +	under.five.deaths:thinness..1.19.years +
-                    Population:thinness..1.19.years +	Adult.Mortality:Polio +	Status:Total.expenditure +	Status:GDP + percentage.expenditure:Population +
-                    Alcohol:thinness.5.9.years +	infant.deaths:Population +	Alcohol:HIV.AIDS +	HIV.AIDS:Population +	BMI:under.five.deaths +
-                    Total.expenditure:thinness.5.9.years +	Total.expenditure:HIV.AIDS +	percentage.expenditure:HIV.AIDS +
-                    Diphtheria:Income.composition.of.resources +	Measles:HIV.AIDS +	Measles:Schooling +	Status:Schooling + Status:Measles +
-                    Status:Income.composition.of.resources +	Status:thinness.5.9.years	+ Status:Hepatitis.B +	percentage.expenditure:GDP +
-                    percentage.expenditure:Schooling +	GDP:Schooling +	Status:percentage.expenditure +	percentage.expenditure:Polio +	
-                    Polio:Total.expenditure	 + Status:Polio +	Measles:thinness..1.19.years	+ Population:thinness.5.9.years +	Polio:Diphtheria,
-                    data = train)
-#summary(modeltest3)
-#vif(modeltest3)
-#ols_plot_resid_fit(modeltest3)
-#ols_plot_resid_lev(modeltest3)
-#ols_plot_resid_qq(modeltest3)
-#ols_plot_resid_hist(modeltest3)
-```
 
 # Getting results of the 3 Models
 ```{r}
@@ -493,10 +441,10 @@ PredAll  %>% mutate(difference = (Value - ActualValue)) %>% group_by(Model) %>%
   geom_text(aes(label = round(RMSE, 4), vjust = -0.5)) + xlab("Model #") + ylab("RMSE on Test Set") + ggtitle("Model RMSE's 70/30 Cross Validation")
 ```
 
-# Repeating RMSE 
+# Linear Model Benchmarking
 ```{r}
 # Set number of times you would like to repeat the sampling/testing - currently 500
-iterations = 1:500
+iterations = 1:100
 
 # the initial values for the columns (might not need these now that ive switched to building columns) 
 rmse1 = c()
@@ -510,13 +458,18 @@ for(i in iterations){
   train<- Life14[index,]
   test<- Life14[-index,]
   
-  # the model runs -  feel free to change them up and see what comes out
-  modeltest1 <- lm(Life.expectancy ~ Adult.Mortality + SchoolFactor + LHIV.AIDS + percentage.expenditure + Total.expenditure + Linfant.deaths , data = train)
+   # Create train and test sets for scaled linear models
+  indexS<-sample(1:dim(Life14Scale)[1],128,replace=F)
+  trainS<-Life14Scale[indexS,]
+  testS<-Life14Scale[-indexS,]
   
-  modeltest2 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + percentage.expenditure + 
-                   Linfant.deaths + Status + LGDP + Diphtheria , data = train)
+  # the model runs 
+  modeltest1 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths, data = train)
   
-  modeltest3 <- lm(Life.expectancy ~ Adult.Mortality, data = train)
+  modeltest2 <-  lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths + 
+                   scale(percentage.expenditure) + SchoolFactor:scale(percentage.expenditure) + Total.expenditure + BMI + LThin19, data = train)
+  
+  modeltest3 <- lm(Life.expectancy ~ Adult.Mortality +  percentage.expenditure + Diphtheria + Schooling, data = trainS)
   
   # predictors and column building
   predictions1 <- modeltest1 %>% predict(test)
@@ -531,10 +484,10 @@ for(i in iterations){
                 RMSE = RMSE(predictions2,test$Life.expectancy), MAE = MAE(predictions2, test$Life.expectancy))
   rmse2 = c(rmse2, d2$RMSE)
   
-  predictions3 <- modeltest3 %>% predict(test)
+  predictions3 <- modeltest3 %>% predict(testS)
 
-  d3 = data.frame(R2 = R2(predictions3,test$Life.expectancy),
-                RMSE = RMSE(predictions3,test$Life.expectancy), MAE = MAE(predictions3, test$Life.expectancy))
+  d3 = data.frame(R2 = R2(predictions3,testS$Life.expectancy),
+                RMSE = RMSE(predictions3,testS$Life.expectancy), MAE = MAE(predictions3, testS$Life.expectancy))
   rmse3 = c(rmse3, d3$RMSE)
   # End for
 }
@@ -547,7 +500,7 @@ range1 = max(rmsedf$rmse1) - min(rmsedf$rmse1)
 range2 = max(rmsedf$rmse2) - min(rmsedf$rmse2)
 range3 = max(rmsedf$rmse3) - min(rmsedf$rmse3)
 
-# Looking at range of each model to determine how variant it is - can also look at stats above
+# Looking at descriptive stats
 Means
 print("Standard Devs")
 SDs
@@ -558,18 +511,17 @@ print(paste("Model 3 Range" , round(range3, 3)))
 cat("Summary: 
     ")
 summary(Model.Average.RMSE)
-
-
 ```
 
+Knn Model benchmarking
 ```{r}
 # Set knn vectors - these are the column #s that will be analyzed 
-knnvector1 = c(3,6,12,20)
-knnvector2 = c(3,6,13,26:30)
-knnvector3 = c(3,6,13,20)
+knnvector1 = c(3,6,12,20) # Adult.Mortality, percentage.expenditure, total.expenditure, schooling
+knnvector2 = c(3,6,13,27:31) # Adult.Mortality, percentage.expenditure, Diptheria, schooling, all logged variables
+knnvector3 = c(3,6,13,20) # Adult.Mortality, percentage.expenditure, Diptheria, schooling
 
 # Start of Loop Variables
-iterations = 1:500
+iterations = 1:100
 i = 0
 knnrmse1 = c()
 knnrmse2 = c()
@@ -584,7 +536,7 @@ for(i in iterations){
 
 
   #KNN1
-  predknn1 <- knn.reg(train[,knnvector1], test[, knnvector1], train$Life.expectancy, k = 3)
+  predknn1 <- knn.reg(train[,knnvector1], test[, knnvector1], train$Life.expectancy, k = 4)
   Knn_Predictions_1 = as.data.frame(predknn1$pred)
   names(Knn_Predictions_1)[1] <- "Predictions"
 
@@ -596,7 +548,7 @@ for(i in iterations){
   knnrmse1 = c(knnrmse1, RMSEknn1)
 
   #KNN2
-  predknn2 <- knn.reg(train[,knnvector2], test[, knnvector2], train$Life.expectancy, k = 3)
+  predknn2 <- knn.reg(train[,knnvector2], test[, knnvector2], train$Life.expectancy, k = 9)
   Knn_Predictions_2 = as.data.frame(predknn2$pred)
   names(Knn_Predictions_2)[1] <- "Predictions"
 
@@ -630,7 +582,7 @@ knnrange1 = max(knnrmsedf$knnrmse1) - min(knnrmsedf$knnrmse1)
 knnrange2 = max(knnrmsedf$knnrmse2) - min(knnrmsedf$knnrmse2)
 knnrange3 = max(knnrmsedf$knnrmse3) - min(knnrmsedf$knnrmse3)
 
-# Looking at range of each model to determine how variant it is - can also look at stats above
+# Looking at descriptive stats
 Means
 print("Standard Devs")
 SDs
@@ -641,9 +593,44 @@ print(paste("Model 3 Range" , round(knnrange3, 3)))
 cat("Summary: 
     ")
 summary(Knn.Model.Average.RMSE)
-
-
 ```
+
+
+# Looks for optinal K value between 1-50. Just change the knnvector to run different models.
+```{r}
+iterations = 50
+numks = 50
+masterRMSE = matrix(nrow = iterations, ncol = numks)
+
+
+for(j in 1:iterations)
+{
+rmseknn = data.frame(rmse = numeric(50), k = numeric(50))
+index<-sample(1:dim(Life14Scale)[1],128,replace=F)
+train<-Life14Scale[index,]
+test<-Life14Scale[-index,]
+for(i in 3:numks)
+{
+  predknn <- knn.reg(train[,knnvector3], test[,knnvector3], train$Life.expectancy, k = i)
+  Knn_Predictions = as.data.frame(predknn$pred)
+  names(Knn_Predictions)[1] <- "Predictions"
+
+  trial <- data.frame(Predictions = c(Knn_Predictions), Actual = c(test$Life.expectancy))
+
+  trial = trial %>% mutate(ResidualSq = (Predictions - Actual)^2)
+
+  RMSEknn = sqrt(sum((trial$ResidualSq)/nrow(test)))
+  masterRMSE[j,i] = RMSEknn
+}
+}
+masterRMSE = masterRMSE[,-(1:2)]
+MeanRMSE = colMeans(masterRMSE)
+# How can I title this plot and change the x axis label? I Suck at Base R
+plot(seq(3,numks,1),MeanRMSE, type = "l")
+which.min(MeanRMSE)
+min(MeanRMSE)
+```
+
 
 # Regression Tree Model
 ```{r tree}
