@@ -14,7 +14,7 @@ library(MASS)
 
 ```{r}
 # Set number of times you would like to repeat the sampling/testing - currently 500
-iterations = 1:500
+iterations = 1:50
 
 # the initial values for the columns (might not need these now that ive switched to building columns) 
 rmse1 = c()
@@ -86,7 +86,7 @@ knnvector2 = c(3,6,13,26:30)
 knnvector3 = c(3,6,13,20)
 
 # Start of Loop Variables
-iterations = 1:500
+iterations = 1:50
 i = 0
 knnrmse1 = c()
 knnrmse2 = c()
