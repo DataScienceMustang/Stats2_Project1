@@ -32,6 +32,7 @@ library(leaps)
 library(matrixStats)
 library(FNN)
 library(MASS)
+library(reshape2)
 
 #Adam's Connections
 life <- read.csv(file = "F:/R For Real/Stats2 Project 1/Life Expectancy Data.csv")
@@ -406,7 +407,7 @@ ols_plot_cooksd_bar(modeltest2)
 
 This model is here to run against the knn for comparison. It uses the same scaled variables as the knnvector3
 ```{r}
-#Create train and test sets for scaled linear models
+#Create train and test sets for scaled linear models - currently reflects knnvector3
 indexS<-sample(1:dim(Life14Scale)[1],128,replace=F)
 trainS<-Life14Scale[indexS,]
 testS<-Life14Scale[-indexS,]
@@ -424,7 +425,7 @@ ols_plot_cooksd_bar(modeltest3)
 
 
 
-# Getting results of the 3 Models
+# Getting results of the 2 Models
 ```{r}
 predictions1 <- modeltest1 %>% predict(test)
 d1 = data.frame(R2 = R2(predictions1,test$Life.expectancy),RMSE = RMSE(predictions1,test$Life.expectancy), MAE = MAE(predictions1, test$Life.expectancy))
@@ -448,7 +449,7 @@ PredAll <- cbind(PredAll, PredActual)
 
 #Final Plot
 PredAll %>% ggplot(aes(x = Value, y = ActualValue, fill = Model)) + geom_point(aes(color = Model)) + geom_smooth(formula = y~x)+
-  facet_wrap(facets = PredAll$Model)
+  facet_wrap(facets = PredAll$Model) + ggtitle("Visual Model Fit") + xlab("Predicted Life Expectancy") + ylab("Actual Life Expectancy")
 
 #Barchart of results
 PredAll  %>% mutate(difference = (Value - ActualValue)) %>% group_by(Model) %>% 
@@ -508,13 +509,14 @@ for(i in iterations){
   # End for
 }
 # putting the dataframe together and outputting relevant statistics
-Model.Average.RMSE = cbind(rmse1, rmse2, rmse3)
+Model.Average.RMSE = cbind(rmse1, rmse2)
 rmsedf = as.data.frame(Model.Average.RMSE)
 Means = colMeans(Model.Average.RMSE)
 SDs = round(colSds(Model.Average.RMSE), 3)
 range1 = max(rmsedf$rmse1) - min(rmsedf$rmse1)
 range2 = max(rmsedf$rmse2) - min(rmsedf$rmse2)
-range3 = max(rmsedf$rmse3) - min(rmsedf$rmse3)
+#range3 = max(rmsedf$rmse3) - min(rmsedf$rmse3)
+rmsedf1 = melt(rmsedf,rmse = c("n", "rmse"))
 
 # Looking at descriptive stats
 Means
@@ -527,6 +529,18 @@ print(paste("Model 3 Range" , round(range3, 3)))
 cat("Summary: 
     ")
 summary(Model.Average.RMSE)
+```
+```{r}
+rmsedf1 %>% group_by(variable) %>% summarise(mean = (mean(value))) %>% 
+  ggplot(aes(x = reorder(variable, -mean), y = mean, fill = variable)) + geom_col(width = 0.75) + geom_text(aes(label = round(mean,3), vjust = -0.5)) + 
+  ggtitle("Average RMSE over 100 Shuffles (Linear Models)") + xlab("Model #") + ylab("Mean RMSE")
+```
+
+```{r}
+rmsedf1 %>% ggplot(aes(x = variable, y = value)) + geom_boxplot()
+
+# Here we can see there is no significant difference between the models in terms of RMSE
+t.test(rmse1,rmse2, var.equal = FALSE)
 ```
 
 ```{r}
@@ -616,6 +630,7 @@ SDs = round(colSds(Knn.Model.Average.RMSE), 3)
 knnrange1 = max(knnrmsedf$knnrmse1) - min(knnrmsedf$knnrmse1)
 knnrange2 = max(knnrmsedf$knnrmse2) - min(knnrmsedf$knnrmse2)
 knnrange3 = max(knnrmsedf$knnrmse3) - min(knnrmsedf$knnrmse3)
+knnrmsedf1 = melt(knnrmsedf,rmse = c("n", "rmse"))
 
 # Looking at descriptive stats
 Means
@@ -628,6 +643,21 @@ print(paste("Model 3 Range" , round(knnrange3, 3)))
 cat("Summary: 
     ")
 summary(Knn.Model.Average.RMSE)
+```
+
+```{r}
+knnrmsedf1 %>% group_by(variable) %>% summarise(mean = (mean(value))) %>% 
+  ggplot(aes(x = reorder(variable, -mean), y = mean, fill = variable)) + geom_col(width = 0.75) + geom_text(aes(label = round(mean,3), vjust = -0.5)) + 
+  ggtitle("Average RMSE over 100 Shuffles (KNN)") + xlab("Model #") + ylab("Mean RMSE")
+```
+
+```{r}
+# Here we can see that knnvector2 is significantly different that knnvector1 and knnvector3. 1 and 3 are not significantly different
+# Dont forget multiple comparison adjustment
+knnrmsedf1 %>% ggplot(aes(x = variable, y = value)) + geom_boxplot()
+t.test(knnrmse1,knnrmse2, var.equal = FALSE)
+t.test(knnrmse1,knnrmse3, var.equal = FALSE)
+t.test(knnrmse2,knnrmse3, var.equal = FALSE)
 ```
 
 
