@@ -101,7 +101,7 @@ for(i in iterations){
 
 
   #KNN1
-  predknn1 <- knn.reg(train[,knnvector1], test[, knnvector1], train$Life.expectancy, k = 3)
+  predknn1 <- knn.reg(train[,knnvector1], test[, knnvector1], train$Life.expectancy, k = 4)
   Knn_Predictions_1 = as.data.frame(predknn1$pred)
   names(Knn_Predictions_1)[1] <- "Predictions"
 
@@ -113,7 +113,7 @@ for(i in iterations){
   knnrmse1 = c(knnrmse1, RMSEknn1)
 
   #KNN2
-  predknn2 <- knn.reg(train[,knnvector2], test[, knnvector2], train$Life.expectancy, k = 3)
+  predknn2 <- knn.reg(train[,knnvector2], test[, knnvector2], train$Life.expectancy, k = 9)
   Knn_Predictions_2 = as.data.frame(predknn2$pred)
   names(Knn_Predictions_2)[1] <- "Predictions"
 
