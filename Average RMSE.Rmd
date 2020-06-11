@@ -14,7 +14,7 @@ library(MASS)
 
 ```{r}
 # Set number of times you would like to repeat the sampling/testing - currently 500
-iterations = 1:50
+iterations = 1:1000
 
 # the initial values for the columns (might not need these now that ive switched to building columns) 
 rmse1 = c()
@@ -28,13 +28,19 @@ for(i in iterations){
   train<- Life14[index,]
   test<- Life14[-index,]
   
+   # Create train and test sets for scaled linear models
+  indexS<-sample(1:dim(Life14Scale)[1],128,replace=F)
+  trainS<-Life14Scale[indexS,]
+  testS<-Life14Scale[-indexS,]
+  
   # the model runs -  feel free to change them up and see what comes out
-  modeltest1 <- lm(Life.expectancy ~ Adult.Mortality + SchoolFactor + LHIV.AIDS + percentage.expenditure + Total.expenditure + Linfant.deaths , data = train)
+  modeltest1 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths, data = train)
   
-  modeltest2 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + percentage.expenditure + 
-                   Linfant.deaths + Status + LGDP + Diphtheria , data = train)
+  modeltest2 <-  lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths + 
+                   scale(percentage.expenditure) + SchoolFactor:scale(percentage.expenditure) + Total.expenditure + BMI + LThin19, data = train)
   
-  modeltest3 <- lm(Life.expectancy ~ Adult.Mortality, data = train)
+  modeltest3 <- lm(Life.expectancy ~ Schooling + scale(LHIV.AIDS) + Adult.Mortality + scale(Linfant.deaths) + 
+                   percentage.expenditure + Total.expenditure + scale(BMI) + scale(LThin19), data = trainS)
   
   # predictors and column building
   predictions1 <- modeltest1 %>% predict(test)
@@ -49,10 +55,10 @@ for(i in iterations){
                 RMSE = RMSE(predictions2,test$Life.expectancy), MAE = MAE(predictions2, test$Life.expectancy))
   rmse2 = c(rmse2, d2$RMSE)
   
-  predictions3 <- modeltest3 %>% predict(test)
+  predictions3 <- modeltest3 %>% predict(testS)
 
-  d3 = data.frame(R2 = R2(predictions3,test$Life.expectancy),
-                RMSE = RMSE(predictions3,test$Life.expectancy), MAE = MAE(predictions3, test$Life.expectancy))
+  d3 = data.frame(R2 = R2(predictions3,testS$Life.expectancy),
+                RMSE = RMSE(predictions3,testS$Life.expectancy), MAE = MAE(predictions3, testS$Life.expectancy))
   rmse3 = c(rmse3, d3$RMSE)
   # End for
 }
@@ -65,7 +71,7 @@ range1 = max(rmsedf$rmse1) - min(rmsedf$rmse1)
 range2 = max(rmsedf$rmse2) - min(rmsedf$rmse2)
 range3 = max(rmsedf$rmse3) - min(rmsedf$rmse3)
 
-# Looking at range of each model to determine how variant it is - can also look at stats above
+# Looking at descriptive stats
 Means
 print("Standard Devs")
 SDs
@@ -81,12 +87,12 @@ summary(Model.Average.RMSE)
 ```
 ```{r}
 # Set knn vectors - these are the column #s that will be analyzed 
-knnvector1 = c(3,6,12,20)
-knnvector2 = c(3,6,13,26:30)
-knnvector3 = c(3,6,13,20)
+knnvector1 = c(3,6,12,20) # Adult.Mortality, percentage.expenditure, total.expenditure, schooling
+knnvector2 = c(3,6,13,27:31) # Adult.Mortality, percentage.expenditure, Diptheria, schooling, all logged variables
+knnvector3 = c(3,6,13,20) # Adult.Mortality, percentage.expenditure, Diptheria, schooling
 
 # Start of Loop Variables
-iterations = 1:50
+iterations = 1:500
 i = 0
 knnrmse1 = c()
 knnrmse2 = c()
@@ -147,7 +153,7 @@ knnrange1 = max(knnrmsedf$knnrmse1) - min(knnrmsedf$knnrmse1)
 knnrange2 = max(knnrmsedf$knnrmse2) - min(knnrmsedf$knnrmse2)
 knnrange3 = max(knnrmsedf$knnrmse3) - min(knnrmsedf$knnrmse3)
 
-# Looking at range of each model to determine how variant it is - can also look at stats above
+# Looking at descriptive stats
 Means
 print("Standard Devs")
 SDs
