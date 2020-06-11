@@ -1,0 +1,112 @@
+---
+title: "Report"
+author: "AP"
+date: "5/30/2020"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+### Objective 2: 
+
+Use a set of predictors used from your previous linear regression models and fit your nonparametric model to the data, keeping in mind what the particular model calls for in terms of what type of predictors can be used and parameters that control for model complexity. The ISLR book provides code at the end of each chapter and I will also provide a small script for you to have so you’re not starting from scratch. In your write up after the regression models, I want you to include a small section that includes the following:
+1. A brief description of your nonparametric model’s strategy to make a prediction. Include Pros and Cons.
+2. Provide any additional details that you feel might be necessary to report.
+3. Report the test ASE using this nonparametric model so we can see how well it does compared to regression.
+
+
+Import data:
+
+```{r message = FALSE}
+library(tidyverse)
+df <- read.csv("Life Expectancy Data.csv")
+```
+
+
+Subset data for 2014:
+
+```{r}
+df.2014 <- filter(df, Year == 2014)
+```
+
+
+Summary statistics:
+
+```{r}
+summary(df.2014)
+```
+
+Remove categorical variables:
+
+```{r}
+df.2014 <- subset(df.2014, select = -c(Country, Year, Status))
+```
+
+
+Remove incomplete cases:
+
+```{r}
+df.2014_2 <- na.omit(df.2014)
+```
+
+
+Create training and test partitions:
+
+
+```{r message = FALSE}
+library(caret)
+set.seed(1)
+inTrain <- createDataPartition(df.2014_2$Life.expectancy, p = 0.7, list = FALSE)
+training <- df.2014_2[inTrain, ]
+test <- df.2014_2[-inTrain, ]
+```
+
+
+Fit a knn regression with same predictors used for linear regression, hyperparameter tuning by 10-fold crossvalidation:
+
+```{r}
+trControl <- trainControl(method = "cv", number = 10)
+knn.fit1 <- train(Life.expectancy ~ Income.composition.of.resources + Schooling + 
+                  Adult.Mortality, data = training, method = "knn", trControl = trControl)
+knn.fit1
+```
+
+Test ASE of knn regression:
+
+```{r}
+predicted.knn <- predict(knn.fit1, test)
+residuals <- predicted.knn - test$Life.expectancy
+ASE.knn <- mean(residuals^2)
+ASE.knn
+```
+
+
+Fit a decision trees regression with same predictors used for linear regression, hyperparameter tuning by 10-fold crossvalidation:
+
+```{r warning = FALSE}
+library(rpart)
+fit3 <- rpart(Life.expectancy ~ Income.composition.of.resources + Schooling + 
+                  Adult.Mortality, data = training,
+              control = rpart.control(cp = 0.0653819))
+```
+
+```{r}
+plot(fit3)
+text(fit3, use.n = TRUE)
+```
+
+
+Test ASE of decision trees regression:
+
+```{r}
+predicted.trees <- predict(fit3, test)
+residuals <- predicted.trees - test$Life.expectancy
+ASE.trees <- mean(residuals^2)
+ASE.trees
+```
