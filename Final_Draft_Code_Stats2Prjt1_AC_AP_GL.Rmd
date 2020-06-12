@@ -379,9 +379,9 @@ ols_step_both_aic(modelgenerator)
 ```
 
 
-# Gut Model - EDA first - human variable selection - Some tech use to look at optimum number of predictors
+# Gut Model - EDA first - human variable selection - Some tech use to look at optimum number of predictors - income comp makes it worse
 ```{r}
-modeltest1 <- lm(Life.expectancy ~ Income.composition.of.resources + SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths, data = train)
+modeltest1 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths, data = train)
 summary(modeltest1)
 vif(modeltest1)
 ols_plot_resid_fit(modeltest1)
@@ -395,7 +395,7 @@ ols_plot_cooksd_bar(modeltest1)
 # complex model - interactions - higher order terms - autoselection methods - through many iterations I found no indication significant interactions, however 
 while playing with some models I found an advantageous result when using Schoolfactor:scale(percentage.expeniture). The interaction is not significant but provides a slight edge in prediction (< 2% for most runs)
 ```{r}
-modeltest2 <-  lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths + 
+modeltest2 <-  lm(Life.expectancy ~ Income.composition.of.resources + SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths + 
                    scale(percentage.expenditure) + SchoolFactor:scale(percentage.expenditure) + Total.expenditure + BMI + LThin19, data = train)
 summary(modeltest2)
 ols_plot_resid_fit(modeltest2)
@@ -454,7 +454,7 @@ PredAll %>% ggplot(aes(x = Value, y = ActualValue, fill = Model)) + geom_point(a
 #Barchart of results
 PredAll  %>% mutate(difference = (Value - ActualValue)) %>% group_by(Model) %>% 
   summarise(RMSE = sqrt(sum(difference^2)/nrow(test))) %>%
-  ggplot(aes(x = reorder(Model,-RMSE), y = RMSE)) + geom_col(aes(fill = Model)) + 
+  ggplot(aes(x = reorder(Model,-RMSE), y = RMSE)) + geom_col(width = 0.75, aes(fill = Model)) + 
   geom_text(aes(label = round(RMSE, 4), vjust = -0.5)) + xlab("Model #") + ylab("RMSE on Test Set") + ggtitle("Model RMSE's 70/30 Cross Validation")
 ```
 
@@ -483,7 +483,7 @@ for(i in iterations){
   # the model runs 
   modeltest1 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths, data = train)
   
-  modeltest2 <-  lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths + 
+  modeltest2 <-  lm(Life.expectancy ~ Income.composition.of.resources + SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths + 
                    scale(percentage.expenditure) + SchoolFactor:scale(percentage.expenditure) + Total.expenditure + BMI + LThin19, data = train)
   
   modeltest3 <- lm(Life.expectancy ~ Adult.Mortality +  percentage.expenditure + Diphtheria + Schooling, data = trainS)
@@ -637,9 +637,9 @@ Means
 print("Standard Devs")
 SDs
 print("ranges - measure of variance between train/test shuffles")
-print(paste("Model 1 Range" , round(knnrange1, 3)))
-print(paste("Model 2 Range" , round(knnrange2, 3)))
-print(paste("Model 3 Range" , round(knnrange3, 3)))
+print(paste("Model 1 Range" , round(knnrange1, 4)))
+print(paste("Model 2 Range" , round(knnrange2, 4)))
+print(paste("Model 3 Range" , round(knnrange3, 4)))
 cat("Summary: 
     ")
 summary(Knn.Model.Average.RMSE)
