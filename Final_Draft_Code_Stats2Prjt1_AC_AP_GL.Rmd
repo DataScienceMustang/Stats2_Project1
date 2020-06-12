@@ -379,7 +379,7 @@ ols_step_both_aic(modelgenerator)
 ```
 
 
-# Gut Model - EDA first - human variable selection - Some tech use to look at optimum number of predictors - income comp makes it worse
+# Gut Model - EDA first - human variable selection - Some tech use to look at optimum number of predictors - income comp increases model variance
 ```{r}
 modeltest1 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths, data = train)
 summary(modeltest1)
