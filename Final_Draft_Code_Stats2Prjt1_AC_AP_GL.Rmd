@@ -35,13 +35,13 @@ library(MASS)
 library(reshape2)
 
 #Adam's Connections
-life <- read.csv(file = "F:/R For Real/Stats2 Project 1/Life Expectancy Data.csv")
+#life <- read.csv(file = "F:/R For Real/Stats2 Project 1/Life Expectancy Data.csv")
 
 #Anish's Connections
 #life <- read.csv("Life Expectancy Data.csv")
 
 #Grace's Connections
-#life <-read.csv("C:/Users/david/OneDrive/Desktop/AppliedStats/6372_AppliedStats_GraceLang/Project1/LifeExpectancyData.csv")
+life <-read.csv("C:/Users/david/OneDrive/Desktop/AppliedStats/6372_AppliedStats_GraceLang/Project1/LifeExpectancyData.csv")
 #life <-read.csv("C:/Users/Dave/Desktop/AppliedStats/Stats2_Project1/LifeExpectancyData.csv")
 
 
@@ -293,7 +293,7 @@ ggpairs(df2)
 Correlation between life expectancy and all the numeric independent variables:
 ```{r}
 # Error in Cor.xy - x must be numeric
-cor.xy <- cor(Life14 %>% dplyr::select(-c(Country, Year, Status)), use = "complete.obs")
+cor.xy <- cor(Life14 %>% dplyr::select(-c(Country, Year, Status,IncomeCompFactor,HepBfactor,PercentExpendFactor,PopulationFactor,GdpFactor,SchoolFactor)), use = "complete.obs")
 LE.cor <- data.frame(var = rownames(cor.xy)[-1], correlation = cor.xy[-1, 1])
 LE.cor %>% ggplot(aes(x = var, y = correlation)) + geom_col() + coord_flip()
 ```
@@ -381,7 +381,7 @@ ols_step_both_aic(modelgenerator)
 
 # Gut Model - EDA first - human variable selection - Some tech use to look at optimum number of predictors
 ```{r}
-modeltest1 <- lm(Life.expectancy ~ Income.composition.of.resources + SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths, data = train)
+modeltest1 <- lm(Life.expectancy ~  SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths, data = train)
 summary(modeltest1)
 vif(modeltest1)
 ols_plot_resid_fit(modeltest1)
@@ -405,7 +405,7 @@ ols_plot_resid_hist(modeltest2)
 ols_plot_cooksd_bar(modeltest2)
 ```
 
-This model is here to run against the knn for comparison. It uses the same scaled variables as the knnvector3
+This model is here to run against the knn for comparison. It uses the same scaled variables as the knnvector3 (linear version of the KNN).
 ```{r}
 #Create train and test sets for scaled linear models - currently reflects knnvector3
 indexS<-sample(1:dim(Life14Scale)[1],128,replace=F)
@@ -444,7 +444,7 @@ Pred2 <- data.frame(Value = predictions2, Model = "2")
 Pred3 <- data.frame(Value = predictions3, Model = "3")
 PredActual <- data.frame(ActualValue = test$Life.expectancy)
 PredAll <- rbind(Pred1, Pred2)
-PredActual <- rbind(PredActual,PredActual)
+PredActual <- rbind(PredActual,PredActua)
 PredAll <- cbind(PredAll, PredActual)
 
 #Final Plot
