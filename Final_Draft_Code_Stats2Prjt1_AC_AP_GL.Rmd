@@ -281,7 +281,7 @@ ggpairs(df2)
 
 Correlation between life expectancy and all the numeric independent variables:
 ```{r}
-# Error in Cor.xy - x must be numeric
+# Good now
 cor.xy <- cor(Life14 %>% dplyr::select(-c(Country, Year, Status,IncomeCompFactor,HepBfactor,PercentExpendFactor,PopulationFactor,GdpFactor,SchoolFactor)), use = "complete.obs")
 LE.cor <- data.frame(var = rownames(cor.xy)[-1], correlation = cor.xy[-1, 1])
 LE.cor %>% ggplot(aes(x = var, y = correlation)) + geom_col() + coord_flip()
@@ -327,10 +327,10 @@ Life14 <- Life14 %>% dplyr::select( -all_of(exclude_factors))
 ```
 
 
-```{r}
+```{r, warning=FALSE}
 # Set training and Testing Sets
 set.seed(1234)
-index<-sample(1:dim(Life14)[1],90,replace=F)
+index<-sample(1:dim(Life14)[1],128,replace=F)
 train<-Life14[index,]
 test<-Life14[-index,]
 
@@ -340,18 +340,23 @@ bics<-summary(reg.fwd)$bic
 plot(1:21,bics,type="l",ylab="BIC",xlab="# of predictors")
 index<-which(bics==min(bics))
 points(index,bics[index],col="red",pch=10)
+print("Min Bics is:")
+which(bics==min(bics))
 
 # Adjr2
 adjr2<-summary(reg.fwd)$adjr2
 plot(1:21,adjr2,type="l",ylab="Adjusted R-squared",xlab="# of predictors")
 index<-which(adjr2==max(adjr2))
 points(index,adjr2[index],col="red",pch=10)
-
+print("Max Adj R2 is:")
+which(adjr2==max(adjr2))
 
 MallowCP <- summary(reg.fwd)$cp
 plot(1:21,MallowCP,type="l",ylab="Mallow's CP",xlab="# of predictors")
 index<-which(MallowCP==min(MallowCP))
 points(index,MallowCP[index],col="red",pch=10)
+print("Min Mallow CP is:")
+which(MallowCP==min(MallowCP))
 ```
 
 
@@ -462,15 +467,28 @@ cat("Summary:
     ")
 summary(Model.Average.RMSE)
 
+# Scatter
+Pred1 <- data.frame(Value = predictions1, Model = "Simple")
+Pred2 <- data.frame(Value = predictions2, Model = "Complex")
+PredActual <- data.frame(ActualValue = test$Life.expectancy)
+PredAll <- rbind(Pred1, Pred2)
+PredActual <- rbind(PredActual,PredActual)
+PredAll <- cbind(PredAll, PredActual)
+PredAll %>% ggplot(aes(x = Value, y = ActualValue, fill = Model)) + geom_point(aes(color = Model)) + geom_smooth(formula = y~x)+
+  facet_wrap(facets = PredAll$Model) + ggtitle("Scatter Plot of Models") + xlab("Predicted") + ylab("Observed")
 
 # Column
 rmsedf1 %>% group_by(variable) %>% summarise(mean = (mean(value))) %>% 
   ggplot(aes(x = reorder(variable, -mean), y = mean, fill = variable)) + geom_col(width = 0.75) + geom_text(aes(label = round(mean,3), vjust = -0.5)) + 
-  ggtitle("Average RMSE over 100 Shuffles (Linear Models)") + xlab("Model #") + ylab("Mean RMSE")
+  ggtitle("Average RMSE over 500 Shuffles (Linear Models)") + xlab("Model #") + ylab("Mean RMSE")
 
 # Boxplot
-rmsedf1 %>%  ggplot(aes(x = variable, y = value)) + geom_boxplot() + facet_wrap(~variable,ncol = TRUE) +
+rmsedf1 %>%  ggplot(aes(x = variable, y = value)) + geom_boxplot(aes(fill = variable)) + facet_wrap(~variable,ncol = TRUE) +
   ggtitle("Mean RMSE Distribution by Model") + ylab("Mean RMSE") + coord_flip() + 
+  theme(axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+# Histogram
+rmsedf1 %>%  ggplot(aes(x = value)) + geom_histogram(aes(fill = variable)) + facet_wrap(~variable,ncol = TRUE) +
+  ggtitle("Mean RMSE Distribution by Model") + xlab("Mean RMSE") + 
   theme(axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
 
 # Here we can see there is no significant difference between the models in terms of RMSE
@@ -500,7 +518,7 @@ Life14Scale$Total.expenditure = scale(Life14Scale$Total.expenditure)
 Knn Model benchmarking
 ```{r, warning=FALSE}
 # Set knn vectors - these are the column #s that will be analyzed 
-knnvector1 = c(3,4,14,20) # Adult.Mortality, infant, hiv, schooling
+knnvector1 = c(3,4,14,20) # Adult.Mortality, schooling, HIV, Infant deaths
 knnvector2 = c(3,20,27,28) # Adult.Mortality, Schooling, Log(HIV), Log(infant)
 knnvector3 = c(3,6,13,20) # Adult.Mortality, percentage.expenditure, Diptheria, schooling
 
@@ -586,7 +604,7 @@ knnrmsedf1 %>% group_by(variable) %>% summarise(mean = (mean(value))) %>%
   ggtitle("Average RMSE over 100 Shuffles (KNN)") + xlab("Model #") + ylab("Mean RMSE")
 
 # Boxplot
-knnrmsedf1 %>%  ggplot(aes(x = variable, y = value)) + geom_boxplot() + facet_wrap(~variable,ncol = TRUE) +
+knnrmsedf1 %>%  ggplot(aes(x = variable, y = value)) + geom_boxplot(aes(fill = variable)) + facet_wrap(~variable,ncol = TRUE) +
   ggtitle("Mean RMSE Distribution by Model") + ylab("Mean RMSE") + coord_flip() + 
   theme(axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
 
