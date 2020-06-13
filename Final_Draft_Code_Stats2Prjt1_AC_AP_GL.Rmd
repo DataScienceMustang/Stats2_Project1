@@ -380,8 +380,6 @@ print("Min Mallow CP is:")
 which(MallowCP==min(MallowCP))
 ```
 
-
-
 # Used to quickly cycle though models while shuffling train/test sets
 Ols step both does forward and backward selection at each step in this case based on model AIC
 ```{r, warning=FALSE}
