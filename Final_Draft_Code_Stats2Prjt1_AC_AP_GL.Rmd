@@ -269,7 +269,9 @@ Life14 %>% group_by(Country, Status) %>% summarise(LifeEx = Life.expectancy) %>%
 
 Boxplot of life expectancy by country status:
 ```{r}
-Life14 %>% ggplot(aes(y = Life.expectancy)) + geom_boxplot() + facet_wrap(~Status)
+Life14 %>% ggplot(aes(y = Life.expectancy)) + geom_boxplot(aes(fill = Status)) + facet_wrap(~Status) + 
+  ylab("Life Expectancy (Years)") + ggtitle("Life Expectancy by Status") + 
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), legend.position = "none")
 ```
 
 Pairwise plots for selected variables:
@@ -305,7 +307,7 @@ ggcorrplot(corr, hc.order = TRUE, type = "lower",
 
 # Looking at Correlations for the rest of the predictors
 ```{r}
-exclude_factors <- c( "Country", "Year", "Status", "thinness..1.19.years", "under.five.deaths", "IncomeCompFactor",
+exclude_factors <- c( "Country", "Year", "Status", "thinness.5.9.years", "under.five.deaths", "IncomeCompFactor",
                      "HepBfactor", "PercentExpendFactor", "SchoolFactor", "GdpFactor", "PopulationFactor",
                      "LHIV.AIDS", "Linfant.deaths", "LUnder5Deaths", "LThin19", "LGDP")
 
@@ -329,7 +331,7 @@ Life14 <- Life14 %>% dplyr::select( -all_of(exclude_factors))
 
 ```{r, warning=FALSE}
 # Set training and Testing Sets
-set.seed(1234)
+#set.seed(1234)
 index<-sample(1:dim(Life14)[1],128,replace=F)
 train<-Life14[index,]
 test<-Life14[-index,]
@@ -337,7 +339,7 @@ test<-Life14[-index,]
 # Forward Selection 
 reg.fwd=regsubsets(Life.expectancy~.,data=train,method="forward",nvmax=20)
 bics<-summary(reg.fwd)$bic
-plot(1:21,bics,type="l",ylab="BIC",xlab="# of predictors")
+plot(1:20,bics,type="l",ylab="BIC",xlab="# of predictors")
 index<-which(bics==min(bics))
 points(index,bics[index],col="red",pch=10)
 print("Min Bics is:")
@@ -345,14 +347,14 @@ which(bics==min(bics))
 
 # Adjr2
 adjr2<-summary(reg.fwd)$adjr2
-plot(1:21,adjr2,type="l",ylab="Adjusted R-squared",xlab="# of predictors")
+plot(1:20,adjr2,type="l",ylab="Adjusted R-squared",xlab="# of predictors")
 index<-which(adjr2==max(adjr2))
 points(index,adjr2[index],col="red",pch=10)
 print("Max Adj R2 is:")
 which(adjr2==max(adjr2))
 
 MallowCP <- summary(reg.fwd)$cp
-plot(1:21,MallowCP,type="l",ylab="Mallow's CP",xlab="# of predictors")
+plot(1:20,MallowCP,type="l",ylab="Mallow's CP",xlab="# of predictors")
 index<-which(MallowCP==min(MallowCP))
 points(index,MallowCP[index],col="red",pch=10)
 print("Min Mallow CP is:")
@@ -380,7 +382,11 @@ ols_step_both_aic(modelgenerator)
 # Gut Model - EDA first - human variable selection - Some tech use to look at optimum number of predictors and comparison of models - income comp increases model variance
 ```{r}
 
-modeltest1 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths , data = train)
+index<-sample(1:dim(Life14)[1],128,replace=F)
+train<-Life14[index,]
+test<-Life14[-index,]
+
+modeltest1 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths + Income.composition.of.resources + Status, data = train)
 
 
 summary(modeltest1)
@@ -397,7 +403,7 @@ ols_plot_cooksd_bar(modeltest1)
 which train/test gets selected. For a better view - run the model benchmark - easy to see over 100-500 interations
 ```{r}
 modeltest2 <-  lm(Life.expectancy ~  SchoolFactor + poly(LHIV.AIDS,2) + poly(Adult.Mortality,2) + poly(under.five.deaths,2) + poly(thinness..1.19.years,2) +
-                   LGDP + Income.composition.of.resources + percentage.expenditure + Income.composition.of.resources:Schooling, data = train)
+                   LGDP + Income.composition.of.resources + percentage.expenditure + Income.composition.of.resources:Schooling + Status, data = train)
 summary(modeltest2)
 ols_plot_resid_fit(modeltest2)
 ols_plot_resid_lev(modeltest2)
