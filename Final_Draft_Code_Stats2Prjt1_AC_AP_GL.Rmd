@@ -35,13 +35,13 @@ library(MASS)
 library(reshape2)
 
 #Adam's Connections
-#life <- read.csv(file = "F:/R For Real/Stats2 Project 1/Life Expectancy Data.csv")
+life <- read.csv(file = "F:/R For Real/Stats2 Project 1/Life Expectancy Data.csv")
 
 #Anish's Connections
 #life <- read.csv("Life Expectancy Data.csv")
 
 #Grace's Connections
-life <-read.csv("C:/Users/david/OneDrive/Desktop/AppliedStats/6372_AppliedStats_GraceLang/Project1/LifeExpectancyData.csv")
+#life <-read.csv("C:/Users/david/OneDrive/Desktop/AppliedStats/6372_AppliedStats_GraceLang/Project1/LifeExpectancyData.csv")
 #life <-read.csv("C:/Users/Dave/Desktop/AppliedStats/Stats2_Project1/LifeExpectancyData.csv")
 
 
@@ -253,30 +253,19 @@ Life14 = Life14 %>% mutate(LUnder5Deaths = log(under.five.deaths + 1))
 Life14 = Life14 %>% mutate(LThin19 = log(thinness..1.19.years + 1))
 Life14 = Life14 %>% mutate(LGDP = log(GDP))
 
-# It would be helpful if we drop Country and Year here -  is there a reason we cant? It looks like everything below this has some lines dedicated to taking out country and year, could save ourselves some room?
-
-# If we cant take it out here - I'll move my scale variables to be created later, I cant have any non-numerics for knn.reg and right now Life14 is passing Country and Year
-
-#Creating scaled variables for knn testing
-Life14Scale = Life14
-Life14Scale$Life.expectancy = scale(Life14Scale$Life.expectancy) 
-Life14Scale$Adult.Mortality = scale(Life14Scale$Adult.Mortality)
-Life14Scale$percentage.expenditure = scale(Life14Scale$percentage.expenditure)
-Life14Scale$Diphtheria = scale(Life14Scale$Diphtheria)
-Life14Scale$Hepatitis.B = scale(Life14Scale$Hepatitis.B)
-Life14Scale$Income.composition.of.resources = scale(Life14Scale$Income.composition.of.resources)
-Life14Scale$Schooling = scale(Life14Scale$Schooling)
-Life14Scale$LHIV.AIDS = scale(Life14Scale$LHIV.AIDS)
-Life14Scale$Linfant.deaths = scale(Life14Scale$Linfant.deaths)
-Life14Scale$LUnder5Deaths = scale(Life14Scale$LUnder5Deaths)
-Life14Scale$LThin19 = scale(Life14Scale$LThin19)
-Life14Scale$LGDP = scale(Life14Scale$LGDP)
-Life14Scale$Total.expenditure = scale(Life14Scale$Total.expenditure)
-
 ```
 
 
 #Visualizing some of the data
+```{r}
+# Life expectancy by Country and status -  goes well with boxplot below 
+Life14 %>% group_by(Country, Status) %>% summarise(LifeEx = Life.expectancy) %>%
+  ggplot(aes(x = reorder(Country, -LifeEx), y = LifeEx, fill = Status)) +
+  geom_col(width = 0.75, na.rm = TRUE) +
+  theme(axis.text.x = element_blank()) + 
+  xlab("Country") + 
+  ggtitle("Life Expectancy 2014")
+```
 
 Boxplot of life expectancy by country status:
 ```{r}
@@ -369,23 +358,26 @@ points(index,MallowCP[index],col="red",pch=10)
 
 # Used to quickly cycle though models while shuffling train/test sets
 Ols step both does forward and backward selection at each step in this case based on model AIC
-```{r}
+```{r, warning=FALSE}
 index<-sample(1:dim(Life14)[1],128,replace=F)
 train<-Life14[index,]
 test<-Life14[-index,]
 
 modelgenerator <- lm(Life.expectancy ~ . , data = train)
 ols_step_both_aic(modelgenerator)
+
+# Gets significant interactions based on aic - can take a minute to run
+#Interaction.modelgenerator <- lm(Life.expectancy ~ (.)^2 , data = train)
+#ols_step_both_aic(Interaction.modelgenerator)
 ```
 
 
-# Gut Model - EDA first - human variable selection - Some tech use to look at optimum number of predictors - income comp increases model variance
+# Gut Model - EDA first - human variable selection - Some tech use to look at optimum number of predictors and comparison of models - income comp increases model variance
 ```{r}
-<<<<<<< HEAD
-modeltest1 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths, data = train)
-=======
-modeltest1 <- lm(Life.expectancy ~  SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths, data = train)
->>>>>>> 60ce08b65b7b140df2164c88349333f572907672
+
+modeltest1 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths , data = train)
+
+
 summary(modeltest1)
 vif(modeltest1)
 ols_plot_resid_fit(modeltest1)
@@ -396,11 +388,11 @@ ols_plot_cooksd_bar(modeltest1)
 ```
 
 
-# complex model - interactions - higher order terms - autoselection methods - through many iterations I found no indication significant interactions, however 
-while playing with some models I found an advantageous result when using Schoolfactor:scale(percentage.expeniture). The interaction is not significant but provides a slight edge in prediction (< 2% for most runs)
+# complex model - Contains 4 quadratic terms and 1 interaction. Adding more interactions seems to overfit. Will occasionally show some crazy Cook's D based on
+which train/test gets selected. For a better view - run the model benchmark - easy to see over 100-500 interations
 ```{r}
-modeltest2 <-  lm(Life.expectancy ~ Income.composition.of.resources + SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths + 
-                   scale(percentage.expenditure) + SchoolFactor:scale(percentage.expenditure) + Total.expenditure + BMI + LThin19, data = train)
+modeltest2 <-  lm(Life.expectancy ~  SchoolFactor + poly(LHIV.AIDS,2) + poly(Adult.Mortality,2) + poly(under.five.deaths,2) + poly(thinness..1.19.years,2) +
+                   LGDP + Income.composition.of.resources + percentage.expenditure + Income.composition.of.resources:Schooling, data = train)
 summary(modeltest2)
 ols_plot_resid_fit(modeltest2)
 ols_plot_resid_lev(modeltest2)
@@ -409,68 +401,16 @@ ols_plot_resid_hist(modeltest2)
 ols_plot_cooksd_bar(modeltest2)
 ```
 
-This model is here to run against the knn for comparison. It uses the same scaled variables as the knnvector3 (linear version of the KNN).
-```{r}
-#Create train and test sets for scaled linear models - currently reflects knnvector3
-indexS<-sample(1:dim(Life14Scale)[1],128,replace=F)
-trainS<-Life14Scale[indexS,]
-testS<-Life14Scale[-indexS,]
-  
-modeltest3 <- lm(Life.expectancy ~ Adult.Mortality +  percentage.expenditure + Diphtheria + Schooling, data = trainS)
 
-summary(modeltest3)
-vif(modeltest3)
-ols_plot_resid_fit(modeltest3)
-ols_plot_resid_lev(modeltest3)
-ols_plot_resid_qq(modeltest3)
-ols_plot_resid_hist(modeltest3)
-ols_plot_cooksd_bar(modeltest3)
-```
-
-
-
-# Getting results of the 2 Models
-```{r}
-predictions1 <- modeltest1 %>% predict(test)
-d1 = data.frame(R2 = R2(predictions1,test$Life.expectancy),RMSE = RMSE(predictions1,test$Life.expectancy), MAE = MAE(predictions1, test$Life.expectancy))
-
-predictions2 <- modeltest2 %>% predict(test)
-d2 = data.frame(R2 = R2(predictions2,test$Life.expectancy),RMSE = RMSE(predictions2,test$Life.expectancy), MAE = MAE(predictions2, test$Life.expectancy))
-
-predictions3 <- modeltest3 %>% predict(testS)
-d3 = data.frame(R2 = R2(predictions3,testS$Life.expectancy),RMSE = RMSE(predictions3,testS$Life.expectancy), MAE = MAE(predictions3, testS$Life.expectancy))
-
-# Need to remark these values
-#data.frame(RMSE = c(d1$RMSE, d2$RMSE, d3$RMSE), Model = c("1", "2", "3"))
-
-Pred1 <- data.frame(Value = predictions1, Model = "1")
-Pred2 <- data.frame(Value = predictions2, Model = "2")
-Pred3 <- data.frame(Value = predictions3, Model = "3")
-PredActual <- data.frame(ActualValue = test$Life.expectancy)
-PredAll <- rbind(Pred1, Pred2)
-PredActual <- rbind(PredActual,PredActua)
-PredAll <- cbind(PredAll, PredActual)
-
-#Final Plot
-PredAll %>% ggplot(aes(x = Value, y = ActualValue, fill = Model)) + geom_point(aes(color = Model)) + geom_smooth(formula = y~x)+
-  facet_wrap(facets = PredAll$Model) + ggtitle("Visual Model Fit") + xlab("Predicted Life Expectancy") + ylab("Actual Life Expectancy")
-
-#Barchart of results
-PredAll  %>% mutate(difference = (Value - ActualValue)) %>% group_by(Model) %>% 
-  summarise(RMSE = sqrt(sum(difference^2)/nrow(test))) %>%
-  ggplot(aes(x = reorder(Model,-RMSE), y = RMSE)) + geom_col(width = 0.75, aes(fill = Model)) + 
-  geom_text(aes(label = round(RMSE, 4), vjust = -0.5)) + xlab("Model #") + ylab("RMSE on Test Set") + ggtitle("Model RMSE's 70/30 Cross Validation")
-```
-
-# Linear Model Benchmarking
-```{r}
-# Set number of times you would like to repeat the sampling/testing - currently 500
-iterations = 1:100
+# Linear Model Benchmarking - Welch's t-test run at the end (likely a conservative option). 500 observations each (Robust to normal violations) - however sample SD can vary a decent bit based on train/test shuffles and the whole population is 128c55....
+```{r, warning=FALSE}
+# Set number of times you would like to repeat the sampling/testing 
+iterations = 1:500
 
 # the initial values for the columns (might not need these now that ive switched to building columns) 
-rmse1 = c()
-rmse2 = c()
-rmse3 = c()
+rmseSimple = c()
+rmseComplex = c()
+
 
 # Start of Loop
 for(i in iterations){
@@ -479,47 +419,36 @@ for(i in iterations){
   train<- Life14[index,]
   test<- Life14[-index,]
   
-   # Create train and test sets for scaled linear models
-  indexS<-sample(1:dim(Life14Scale)[1],128,replace=F)
-  trainS<-Life14Scale[indexS,]
-  testS<-Life14Scale[-indexS,]
-  
+
   # the model runs 
-  modeltest1 <- lm(Life.expectancy ~ SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths, data = train)
+  modeltest1 
   
-  modeltest2 <-  lm(Life.expectancy ~ Income.composition.of.resources + SchoolFactor + LHIV.AIDS + Adult.Mortality + Linfant.deaths + 
-                   scale(percentage.expenditure) + SchoolFactor:scale(percentage.expenditure) + Total.expenditure + BMI + LThin19, data = train)
+  modeltest2 
   
-  modeltest3 <- lm(Life.expectancy ~ Adult.Mortality +  percentage.expenditure + Diphtheria + Schooling, data = trainS)
   
   # predictors and column building
   predictions1 <- modeltest1 %>% predict(test)
   
   d1 = data.frame(R2 = R2(predictions1,test$Life.expectancy),
                   RMSE = RMSE(predictions1,test$Life.expectancy), MAE = MAE(predictions1, test$Life.expectancy))
-  rmse1 = c(rmse1,d1$RMSE)
+  rmseSimple = c(rmseSimple,d1$RMSE)
   
   predictions2 <- modeltest2 %>% predict(test)
 
   d2 = data.frame(R2 = R2(predictions2,test$Life.expectancy),
                 RMSE = RMSE(predictions2,test$Life.expectancy), MAE = MAE(predictions2, test$Life.expectancy))
-  rmse2 = c(rmse2, d2$RMSE)
+  rmseComplex = c(rmseComplex, d2$RMSE)
   
-  predictions3 <- modeltest3 %>% predict(testS)
-
-  d3 = data.frame(R2 = R2(predictions3,testS$Life.expectancy),
-                RMSE = RMSE(predictions3,testS$Life.expectancy), MAE = MAE(predictions3, testS$Life.expectancy))
-  rmse3 = c(rmse3, d3$RMSE)
+ 
   # End for
 }
 # putting the dataframe together and outputting relevant statistics
-Model.Average.RMSE = cbind(rmse1, rmse2)
+Model.Average.RMSE = cbind(rmseSimple, rmseComplex)
 rmsedf = as.data.frame(Model.Average.RMSE)
 Means = colMeans(Model.Average.RMSE)
 SDs = round(colSds(Model.Average.RMSE), 3)
-range1 = max(rmsedf$rmse1) - min(rmsedf$rmse1)
-range2 = max(rmsedf$rmse2) - min(rmsedf$rmse2)
-#range3 = max(rmsedf$rmse3) - min(rmsedf$rmse3)
+range1 = max(rmsedf$rmseSimple) - min(rmsedf$rmseSimple)
+range2 = max(rmsedf$rmseComplex) - min(rmsedf$rmseComplex)
 rmsedf1 = melt(rmsedf,rmse = c("n", "rmse"))
 
 # Looking at descriptive stats
@@ -529,7 +458,6 @@ SDs
 print("ranges - measure of variance between train/test shuffles")
 print(paste("Model 1 Range" , round(range1, 3)))
 print(paste("Model 2 Range" , round(range2, 3)))
-#print(paste("Model 3 Range" , round(range3, 3)))
 cat("Summary: 
     ")
 summary(Model.Average.RMSE)
@@ -541,10 +469,12 @@ rmsedf1 %>% group_by(variable) %>% summarise(mean = (mean(value))) %>%
   ggtitle("Average RMSE over 100 Shuffles (Linear Models)") + xlab("Model #") + ylab("Mean RMSE")
 
 # Boxplot
-rmsedf1 %>% ggplot(aes(x = variable, y = value)) + geom_boxplot()
+rmsedf1 %>%  ggplot(aes(x = variable, y = value)) + geom_boxplot() + facet_wrap(~variable,ncol = TRUE) +
+  ggtitle("Mean RMSE Distribution by Model") + ylab("Mean RMSE") + coord_flip() + 
+  theme(axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
 
 # Here we can see there is no significant difference between the models in terms of RMSE
-t.test(rmse1,rmse2, var.equal = FALSE)
+t.test(rmseSimple,rmseComplex, var.equal = FALSE)
 ```
 
 ```{r}
@@ -558,6 +488,7 @@ Life14Scale$Hepatitis.B = scale(Life14Scale$Hepatitis.B)
 Life14Scale$Income.composition.of.resources = scale(Life14Scale$Income.composition.of.resources)
 Life14Scale$Schooling = scale(Life14Scale$Schooling)
 Life14Scale$LHIV.AIDS = scale(Life14Scale$LHIV.AIDS)
+Life14Scale$infant.deaths = scale(Life14Scale$infant.deaths)
 Life14Scale$Linfant.deaths = scale(Life14Scale$Linfant.deaths)
 Life14Scale$LUnder5Deaths = scale(Life14Scale$LUnder5Deaths)
 Life14Scale$LThin19 = scale(Life14Scale$LThin19)
@@ -567,14 +498,14 @@ Life14Scale$Total.expenditure = scale(Life14Scale$Total.expenditure)
 
 
 Knn Model benchmarking
-```{r}
+```{r, warning=FALSE}
 # Set knn vectors - these are the column #s that will be analyzed 
-knnvector1 = c(3,6,12,20) # Adult.Mortality, percentage.expenditure, total.expenditure, schooling
-knnvector2 = c(3,6,13,27:31) # Adult.Mortality, percentage.expenditure, Diptheria, schooling, all logged variables
+knnvector1 = c(3,4,14,20) # Adult.Mortality, infant, hiv, schooling
+knnvector2 = c(3,20,27,28) # Adult.Mortality, Schooling, Log(HIV), Log(infant)
 knnvector3 = c(3,6,13,20) # Adult.Mortality, percentage.expenditure, Diptheria, schooling
 
 # Start of Loop Variables
-iterations = 1:100
+iterations = 1:500
 i = 0
 knnrmse1 = c()
 knnrmse2 = c()
@@ -649,15 +580,19 @@ cat("Summary:
 summary(Knn.Model.Average.RMSE)
 
 
-
+# Column
 knnrmsedf1 %>% group_by(variable) %>% summarise(mean = (mean(value))) %>% 
   ggplot(aes(x = reorder(variable, -mean), y = mean, fill = variable)) + geom_col(width = 0.75) + geom_text(aes(label = round(mean,3), vjust = -0.5)) + 
   ggtitle("Average RMSE over 100 Shuffles (KNN)") + xlab("Model #") + ylab("Mean RMSE")
 
+# Boxplot
+knnrmsedf1 %>%  ggplot(aes(x = variable, y = value)) + geom_boxplot() + facet_wrap(~variable,ncol = TRUE) +
+  ggtitle("Mean RMSE Distribution by Model") + ylab("Mean RMSE") + coord_flip() + 
+  theme(axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
 
-# Here we can see that knnvector2 is significantly different that knnvector1 and knnvector3. 1 and 3 are not significantly different
+# 
 # Dont forget multiple comparison adjustment
-knnrmsedf1 %>% ggplot(aes(x = variable, y = value)) + geom_boxplot()
+
 t.test(knnrmse1,knnrmse2, var.equal = FALSE)
 t.test(knnrmse1,knnrmse3, var.equal = FALSE)
 t.test(knnrmse2,knnrmse3, var.equal = FALSE)
@@ -699,6 +634,23 @@ which.min(MeanRMSE)
 min(MeanRMSE)
 ```
 
+This model is here to run against the knn for comparison. It uses the same scaled variables as the knnvector3 (linear version of the KNN).
+```{r}
+#Create train and test sets for scaled linear models - currently reflects knnvector3
+indexS<-sample(1:dim(Life14Scale)[1],128,replace=F)
+trainS<-Life14Scale[indexS,]
+testS<-Life14Scale[-indexS,]
+  
+modeltest3 <- lm(Life.expectancy ~ Adult.Mortality +  percentage.expenditure + Diphtheria + Schooling, data = trainS)
+
+summary(modeltest3)
+vif(modeltest3)
+ols_plot_resid_fit(modeltest3)
+ols_plot_resid_lev(modeltest3)
+ols_plot_resid_qq(modeltest3)
+ols_plot_resid_hist(modeltest3)
+ols_plot_cooksd_bar(modeltest3)
+```
 
 # Regression Tree Model
 ```{r tree}
