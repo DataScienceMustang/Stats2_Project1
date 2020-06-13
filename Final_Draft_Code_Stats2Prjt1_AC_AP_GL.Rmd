@@ -298,7 +298,6 @@ LE.cor <- data.frame(var = rownames(cor.xy)[-1], correlation = cor.xy[-1, 1])
 LE.cor %>% ggplot(aes(x = var, y = correlation)) + geom_col() + coord_flip()
 ```
 
-
 # Checking Correlations between original variables and their logged counterparts as well as the response - we may only achieve some minor inprovements in GDP and HIV.AIDS but under 5 deaths and infant deaths have changed significantly. Also HIV.AIDS and infant deaths without the log are oddly related
 ```{r}
 corr <- Life14 %>% dplyr::select(Life.expectancy, LHIV.AIDS, Linfant.deaths, LUnder5Deaths,
@@ -337,6 +336,28 @@ exclude_factors <- c("Country", "Year")
 Life14 <- Life14 %>% dplyr::select( -all_of(exclude_factors))
 ```
 
+# Reasoning behind why we log-transformed some of our variables
+```{r outliers}
+#Running full regression model
+full.model <- lm(Life.expectancy~.,data=Life14)
+vif(full.model)
+ols_plot_comp_plus_resid(full.model)
+
+#Observe residuals and outliers
+par(mfrow=c(2,2))
+plot(full.model, which =1) 
+
+#Which obs are outliers according to Cooks D
+cooksd <- cooks.distance(full.model)
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance")  # plot cook's distance
+abline(h = 4*mean(cooksd, na.rm=T), col="red")  # add cutoff line
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4*mean(cooksd, na.rm=T),names(cooksd),""), col="red")
+plot(rstudent(full.model))
+# Influence Plot
+influencePlot(full.model,  main="Influence Plot")
+#influencePlot(full.model, id.method="identify", main="Influence Plot", sub="Circle size is proportial to Cook's Distance" )
+
+```
 
 ```{r}
 # Set training and Testing Sets
@@ -732,4 +753,6 @@ text(prune.life,pretty=0)
 #Looking at the predictions of the pruned tree
 tree.ASE <- mean((test$Life.expectancy - predict(prune.life,newdata =test))^2)
 tree.ASE
+tree.RMSE <- sqrt(mean((test$Life.expectancy - predict(prune.life,newdata =test))^2))
+tree.RMSE
 ```
